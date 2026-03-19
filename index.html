@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Photoshop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #0c0e14; color: #e2e8f0; overflow: hidden; height: 100vh; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 3px; }
+
+        /* ── Main content wrapper ── */
+        .main-content {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            background: #0f1119; overflow: hidden;
+        }
+        .editor-group {
+            display: flex; align-items: stretch; max-height: 100%;
+        }
+
+        /* ── Toolbar (vertical left, tight to canvas) ── */
+        .toolbar {
+            display: flex; flex-direction: column; gap: 3px; padding: 8px;
+            background: #12141c; border-right: 1px solid #1a1d2a;
+            overflow-y: auto; align-items: center;
+            border-radius: 12px 0 0 12px;
+        }
+        .tool-group { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+        .tool-group + .tool-group { border-top: 1px solid #1e2130; padding-top: 8px; margin-top: 4px; }
+        .tbtn {
+            width: 68px; height: 62px; padding: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 5px;
+            border-radius: 12px; cursor: pointer; transition: all 0.12s;
+            color: #8892a8; border: none; background: transparent; font-size: 10px; font-weight: 600; white-space: nowrap;
+        }
+        .tbtn i { font-size: 22px; }
+        .tbtn:hover { background: #1a1d2e; color: #c8d0e0; }
+        .tbtn.active { background: #2563eb; color: white; }
+
+        /* ── Canvas ── */
+        .canvas-area {
+            position: relative; display: flex; align-items: center; justify-content: center;
+        }
+        .canvas-frame {
+            position: relative;
+            box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+            background: repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%) 50%/16px 16px;
+        }
+        #mainCanvas { display: block; }
+
+        /* ── Side Panel (tight to canvas right) ── */
+        .side-panel {
+            width: 272px; min-width: 272px; background: #12141c; border-left: 1px solid #1a1d2a;
+            overflow-y: auto; padding: 14px; display: none;
+            border-radius: 0 12px 12px 0;
+        }
+        .side-panel.open { display: block; }
+        .panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4f5a72; margin-bottom: 10px; }
+        .panel-section { margin-bottom: 16px; }
+
+        /* ── Preset cards ── */
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .preset-card {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 10px 6px; border-radius: 10px; cursor: pointer;
+            background: #181b28; border: 1px solid #1e2236;
+            transition: all 0.12s; text-align: center;
+        }
+        .preset-card:hover { border-color: #3b82f6; background: #1c2038; transform: translateY(-1px); }
+        .preset-card.active { border-color: #3b82f6; background: #1e2a4a; }
+        .preset-card .preset-icon { font-size: 22px; line-height: 1; }
+        .preset-card .preset-label { font-size: 10px; font-weight: 600; color: #8892a8; }
+        .preset-card-wide { grid-column: 1 / -1; flex-direction: row; gap: 8px; justify-content: center; }
+
+        /* ── Inputs ── */
+        .inp {
+            width: 100%; padding: 7px 10px; background: #181b28; border: 1px solid #1e2236;
+            border-radius: 8px; color: #e2e8f0; font-size: 12px; outline: none; transition: border-color 0.12s;
+        }
+        .inp:focus { border-color: #3b82f6; }
+        select.inp { cursor: pointer; }
+        textarea.inp { resize: vertical; min-height: 60px; font-family: inherit; }
+        .lbl { font-size: 11px; color: #5a6580; margin-bottom: 4px; display: block; font-weight: 500; }
+
+        .btn {
+            padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.12s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-p { background: #2563eb; color: white; }
+        .btn-p:hover { background: #1d4ed8; }
+        .btn-s { background: #181b28; color: #c8d0e0; border: 1px solid #1e2236; }
+        .btn-s:hover { background: #1e2236; }
+        .btn-d { background: #dc2626; color: white; }
+        .btn-w { width: 100%; justify-content: center; }
+
+        .color-swatch {
+            width: 32px; height: 32px; border-radius: 8px; border: 2px solid #1e2236;
+            cursor: pointer; overflow: hidden; padding: 0; position: relative;
+        }
+        .color-swatch input[type="color"] { width: 44px; height: 44px; border: none; padding: 0; cursor: pointer; margin: -6px; }
+
+        /* ── Quality track ── */
+        .quality-track { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444 0%, #ef4444 40%, #eab308 40%, #eab308 80%, #22c55e 80%, #22c55e 100%); margin: 6px 0; }
+        .q-slider { -webkit-appearance: none; width: 100%; height: 8px; background: transparent; position: absolute; top: 0; left: 0; margin: 0; cursor: pointer; }
+        .q-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: white; border: 3px solid #2563eb; cursor: pointer; margin-top: -4px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+        /* ── Crop ── */
+        .crop-overlay { position: absolute; inset: 0; display: none; }
+        .crop-overlay.on { display: block; }
+        .crop-scrim { position: absolute; background: rgba(0,0,0,0.55); }
+        .crop-sel { position: absolute; border: 2px dashed #3b82f6; background: rgba(59,130,246,0.06); cursor: move; }
+        .crop-h { position: absolute; width: 10px; height: 10px; background: #3b82f6; border: 2px solid white; border-radius: 2px; }
+        .crop-h.tl { top: -5px; left: -5px; cursor: nw-resize; }
+        .crop-h.tr { top: -5px; right: -5px; cursor: ne-resize; }
+        .crop-h.bl { bottom: -5px; left: -5px; cursor: sw-resize; }
+        .crop-h.br { bottom: -5px; right: -5px; cursor: se-resize; }
+
+        /* ── Text items ── */
+        .text-layer { position: absolute; inset: 0; pointer-events: none; }
+        .text-item {
+            position: absolute; cursor: move; user-select: none; padding: 2px 6px;
+            border: 2px solid transparent; border-radius: 3px; white-space: nowrap;
+        }
+        .text-item.sel { border-color: #3b82f6; }
+        .text-item .del-btn {
+            position: absolute; top: -10px; right: -10px; width: 20px; height: 20px;
+            background: #dc2626; color: white; border-radius: 50%; border: none;
+            font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center;
+        }
+        .text-item.sel .del-btn { display: flex; }
+
+        /* ── Modal ── */
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 999; }
+        .modal-bg.show { display: flex; }
+        .modal { background: #161822; border: 1px solid #1e2236; border-radius: 14px; padding: 20px; max-width: 400px; width: 92%; }
+
+        /* ── Loading overlay ── */
+        .loading-cover {
+            position: absolute; inset: 0; background: rgba(12,14,20,0.85);
+            display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; z-index: 50;
+        }
+        .loading-cover.on { display: flex; }
+        .spin { width: 32px; height: 32px; border: 3px solid #1e2236; border-top-color: #3b82f6; border-radius: 50%; animation: sp 0.6s linear infinite; }
+        @keyframes sp { to { transform: rotate(360deg); } }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+            background: #1e293b; color: #e2e8f0; padding: 10px 22px; border-radius: 10px;
+            font-size: 12px; font-weight: 600; box-shadow: 0 6px 28px rgba(0,0,0,0.5);
+            transition: transform 0.25s ease; z-index: 1000; border: 1px solid #2d3148;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* ── Emoji grid ── */
+        .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+        .emoji-btn {
+            width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; background: #181b28; border: 1px solid #1e2236; border-radius: 8px;
+            cursor: pointer; transition: all 0.1s;
+        }
+        .emoji-btn:hover { background: #1e2a4a; border-color: #3b82f6; transform: scale(1.1); }
+
+        /* ── Sticker shapes ── */
+        .shape-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .shape-btn {
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; background: #181b28; border: 1px solid #1e2236; border-radius: 8px;
+            cursor: pointer; color: #6b7a99; transition: all 0.1s;
+        }
+        .shape-btn:hover { background: #1e2a4a; border-color: #3b82f6; color: #93a3c0; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+
+    <!-- ── Gemini API Key Modal ── -->
+    <div id="apiModal" class="modal-bg">
+        <div class="modal">
+            <h2 class="text-base font-bold mb-1">Google Gemini API-nøgle</h2>
+            <p class="text-xs text-slate-400 mb-3">Du skal bruge en Gemini API-nøgle til AI-funktionerne. Den er gratis at oprette.</p>
+            <a href="https://aistudio.google.com/apikey" target="_blank" class="text-blue-400 text-xs hover:underline block mb-3">
+                <i class="fas fa-external-link-alt mr-1"></i> Hent gratis API-nøgle fra Google AI Studio
+            </a>
+            <input id="apiKeyInp" type="text" class="inp mb-3" placeholder="Indsæt din Gemini API-nøgle...">
+            <div class="flex gap-2">
+                <button onclick="saveApiKey()" class="btn btn-p flex-1">Gem nøgle</button>
+                <button onclick="closeApiModal()" class="btn btn-s">Annuller</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── BG Replace Modal ── -->
+    <div id="bgModal" class="modal-bg">
+        <div class="modal">
+            <h2 class="text-base font-bold mb-3">Vælg ny baggrund</h2>
+            <div class="space-y-3">
+                <div>
+                    <span class="lbl">Ensfarvet baggrund</span>
+                    <div class="flex gap-2 items-center">
+                        <div class="color-swatch"><input type="color" id="bgColor" value="#ffffff"></div>
+                        <button onclick="applyBgColor()" class="btn btn-p text-xs">Brug farve</button>
+                    </div>
+                </div>
+                <div class="border-t border-[#1e2236] pt-3">
+                    <span class="lbl">Upload baggrundsbillede</span>
+                    <input type="file" id="bgImgUpload" accept="image/*" class="inp text-xs" onchange="applyBgImage(event)">
+                </div>
+                <button onclick="closeBgModal()" class="btn btn-s btn-w">Annuller</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MAIN LAYOUT ═══ -->
+    <div class="flex flex-col h-screen">
+
+        <!-- ── Top bar ── -->
+        <div class="flex items-center justify-between px-4 py-2 bg-[#12141c] border-b border-[#1a1d2a]">
+            <div class="flex items-center gap-2">
+                <label class="btn btn-s text-xs cursor-pointer">
+                    <i class="fas fa-upload"></i> Upload
+                    <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleUpload(event)">
+                </label>
+                <span id="fileName" class="text-[10px] text-slate-600 ml-1"></span>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <svg width="26" height="26" viewBox="0 0 28 28" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="22" height="22" rx="3"/>
+                    <circle cx="10" cy="11" r="2.5"/>
+                    <path d="M3 20l6-6 4 4 3-3 9 9"/>
+                    <path d="M19 3v4h4"/>
+                </svg>
+                <span class="font-bold text-base tracking-wide" style="color:#e2e8f0">Mini Photoshop</span>
+                <span class="text-base" style="color:#64748b;margin-left:4px">af Anders Bæk</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="undo()" class="btn btn-s text-xs"><i class="fas fa-undo"></i> Fortryd</button>
+                <button onclick="downloadImage()" class="btn btn-p text-xs"><i class="fas fa-download"></i> Download</button>
+            </div>
+        </div>
+
+        <!-- ── Main content ── -->
+        <div class="main-content" id="mainContent">
+          <div class="editor-group">
+
+            <!-- ── Toolbar (venstre, tæt på lærred) ── -->
+            <div class="toolbar" id="toolbar">
+                <div class="tool-group">
+                    <button class="tbtn" data-tool="crop"><i class="fas fa-crop-alt"></i>Beskær</button>
+                    <button class="tbtn" data-tool="rotate"><i class="fas fa-sync-alt"></i>Roter</button>
+                    <button class="tbtn" data-tool="text"><i class="fas fa-font"></i>Tekst</button>
+                    <button class="tbtn" data-tool="resize"><i class="fas fa-compress-alt"></i>Størrelse</button>
+                </div>
+                <div class="tool-group">
+                    <button class="tbtn" data-tool="removebg"><i class="fas fa-eraser"></i>Fjern bg</button>
+                    <button class="tbtn" data-tool="replacebg"><i class="fas fa-image"></i>Erstat bg</button>
+                    <button class="tbtn" data-tool="clothes"><i class="fas fa-shirt"></i>Tøj</button>
+                </div>
+                <div class="tool-group">
+                    <button class="tbtn" data-tool="fbcreative"><i class="fab fa-facebook"></i>FB kreativ</button>
+                    <button class="tbtn" data-tool="smarttext"><i class="fas fa-wand-magic-sparkles"></i>AI tekst</button>
+                </div>
+            </div>
+
+            <!-- Canvas area -->
+            <div class="canvas-area" id="canvasArea">
+                <!-- Upload overlay når lærred er tomt -->
+                <label id="uploadOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:40px 56px;border-radius:20px;border:2px dashed #3b82f6;background:transparent;transition:background 0.2s,box-shadow 0.2s" onmouseover="this.style.background='rgba(59,130,246,0.1)';this.style.boxShadow='0 0 24px rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent';this.style.boxShadow='none'">
+                        <i class="fas fa-cloud-arrow-up" style="font-size:44px;color:#3b82f6"></i>
+                        <span style="font-size:17px;font-weight:600;color:#e2e8f0">Upload billede</span>
+                        <span style="font-size:11px;color:#64748b">Eller træk et billede hertil</span>
+                    </div>
+                    <input type="file" accept="image/*" class="hidden" onchange="handleUpload(event)">
+                </label>
+                <div class="canvas-frame" id="canvasFrame">
+                    <canvas id="mainCanvas"></canvas>
+                    <div class="text-layer" id="textLayer"></div>
+                    <div class="crop-overlay" id="cropOverlay">
+                        <div class="crop-scrim" id="scT"></div><div class="crop-scrim" id="scB"></div>
+                        <div class="crop-scrim" id="scL"></div><div class="crop-scrim" id="scR"></div>
+                        <div class="crop-sel" id="cropSel">
+                            <div class="crop-h tl" data-h="tl"></div><div class="crop-h tr" data-h="tr"></div>
+                            <div class="crop-h bl" data-h="bl"></div><div class="crop-h br" data-h="br"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="loading-cover" id="loadingCover">
+                    <div class="spin"></div>
+                    <span class="text-sm text-slate-400" id="loadingText">Arbejder...</span>
+                </div>
+            </div>
+
+            <!-- ═══ SIDE PANEL (højre, tæt på lærred) ═══ -->
+            <div class="side-panel" id="sidePanel">
+
+                <!-- ── Crop ── -->
+                <div id="P_crop" class="tool-panel hidden">
+                    <div class="panel-title">Beskæring</div>
+                    <p class="text-[11px] text-slate-500 mb-3">Træk i hjørnerne for at vælge området.</p>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <div><span class="lbl">Bredde</span><input id="cropW" class="inp text-xs" readonly></div>
+                        <div><span class="lbl">Højde</span><input id="cropH" class="inp text-xs" readonly></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="applyCrop()" class="btn btn-p flex-1"><i class="fas fa-check"></i> Beskær</button>
+                        <button onclick="cancelTool()" class="btn btn-s">Annuller</button>
+                    </div>
+                </div>
+
+                <!-- ── Rotate ── -->
+                <div id="P_rotate" class="tool-panel hidden">
+                    <div class="panel-title">Roter & Spejlvend</div>
+                    <div class="space-y-2">
+                        <div class="flex gap-2">
+                            <button onclick="rotateImg(-90)" class="btn btn-s flex-1 text-xs"><i class="fas fa-undo"></i> 90° venstre</button>
+                            <button onclick="rotateImg(90)" class="btn btn-s flex-1 text-xs"><i class="fas fa-redo"></i> 90° højre</button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="flipImg('h')" class="btn btn-s flex-1 text-xs"><i class="fas fa-arrows-alt-h"></i> Vandret</button>
+                            <button onclick="flipImg('v')" class="btn btn-s flex-1 text-xs"><i class="fas fa-arrows-alt-v"></i> Lodret</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Text ── -->
+                <div id="P_text" class="tool-panel hidden">
+                    <div class="panel-title">Tekst</div>
+                    <div class="space-y-2">
+                        <div><span class="lbl">Tekst</span><input id="txtVal" class="inp" value="Din tekst her"></div>
+                        <div><span class="lbl">Skrifttype</span>
+                            <select id="txtFont" class="inp">
+                                <option>Inter</option><option>Arial</option><option>Georgia</option>
+                                <option>Verdana</option><option>Impact</option><option>Courier New</option>
+                                <option>Times New Roman</option><option>Comic Sans MS</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 items-end">
+                            <div class="flex-1"><span class="lbl">Størrelse</span><input id="txtSize" type="number" class="inp" value="36" min="8" max="300"></div>
+                            <div><span class="lbl">Farve</span><div class="color-swatch"><input type="color" id="txtColor" value="#000000"></div></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="bBold" onclick="togStyle('bold')" class="btn btn-s px-3 text-xs"><i class="fas fa-bold"></i></button>
+                            <button id="bItalic" onclick="togStyle('italic')" class="btn btn-s px-3 text-xs"><i class="fas fa-italic"></i></button>
+                            <button id="bShadow" onclick="togStyle('shadow')" class="btn btn-s px-3 text-xs"><i class="fas fa-clone"></i></button>
+                        </div>
+                        <button onclick="addText()" class="btn btn-p btn-w"><i class="fas fa-plus"></i> Tilføj tekst</button>
+                        <button onclick="flattenTexts()" id="flattenBtn" class="btn btn-s btn-w" style="display:none"><i class="fas fa-layer-group"></i> Flet ind i billede</button>
+                    </div>
+                </div>
+
+                <!-- ── Resize ── -->
+                <div id="P_resize" class="tool-panel hidden">
+                    <div class="panel-title">Filstørrelse</div>
+                    <p class="text-[11px] text-slate-500 mb-2">Grøn = god kvalitet, rød = lav.</p>
+                    <div class="flex justify-between text-[10px] text-slate-600 mb-1"><span>Lav</span><span>Høj</span></div>
+                    <div class="quality-track relative"><input type="range" id="qSlider" class="q-slider" min="5" max="100" value="92"></div>
+                    <div class="flex justify-between mt-1 mb-3"><span class="text-sm font-semibold" id="qLabel">92%</span><span class="text-xs text-slate-400" id="sizeLabel">--</span></div>
+                    <div class="bg-[#181b28] rounded-lg p-3 text-[11px] space-y-1">
+                        <div class="flex justify-between"><span class="text-slate-500">Original</span><span id="origSize" class="text-slate-300">--</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500">Ny</span><span id="newSize" class="text-slate-300">--</span></div>
+                        <div class="flex justify-between"><span class="text-slate-500">Sparet</span><span id="savedSize" class="text-blue-400">--</span></div>
+                    </div>
+                </div>
+
+                <!-- ── Remove BG ── -->
+                <div id="P_removebg" class="tool-panel hidden">
+                    <div class="panel-title"><i class="fas fa-eraser mr-1"></i> Fjern baggrund</div>
+                    <p class="text-[11px] text-slate-500 mb-3">Vælg hvilken baggrund der skal bruges efter fjernelse.</p>
+                    <div class="preset-grid mb-3">
+                        <div class="preset-card" onclick="aiRemoveBg('transparent')">
+                            <span class="preset-icon">🔲</span><span class="preset-label">Gennemsigtig</span>
+                        </div>
+                        <div class="preset-card" onclick="aiRemoveBg('white')">
+                            <span class="preset-icon">⬜</span><span class="preset-label">Hvid</span>
+                        </div>
+                        <div class="preset-card" onclick="aiRemoveBg('black')">
+                            <span class="preset-icon">⬛</span><span class="preset-label">Sort</span>
+                        </div>
+                        <div class="preset-card" onclick="aiRemoveBg('blue')">
+                            <span class="preset-icon">🟦</span><span class="preset-label">Blå</span>
+                        </div>
+                        <div class="preset-card preset-card-wide" onclick="aiRemoveBg('green')">
+                            <span class="preset-icon">🟩</span><span class="preset-label">Green screen</span>
+                        </div>
+                    </div>
+                    <button onclick="showApiModal()" class="btn btn-s btn-w text-[10px]"><i class="fas fa-key"></i> Skift API-nøgle</button>
+                </div>
+
+                <!-- ── Replace BG ── -->
+                <div id="P_replacebg" class="tool-panel hidden">
+                    <div class="panel-title"><i class="fas fa-image mr-1"></i> Erstat baggrund</div>
+                    <p class="text-[11px] text-slate-500 mb-3">AI erstatter baggrunden med et nyt miljø.</p>
+                    <div class="preset-grid mb-3">
+                        <div class="preset-card" onclick="aiReplaceBg('desert')">
+                            <span class="preset-icon">🏜️</span><span class="preset-label">Ørken</span>
+                        </div>
+                        <div class="preset-card" onclick="aiReplaceBg('city')">
+                            <span class="preset-icon">🌆</span><span class="preset-label">Storby</span>
+                        </div>
+                        <div class="preset-card" onclick="aiReplaceBg('beach')">
+                            <span class="preset-icon">🏖️</span><span class="preset-label">Strand</span>
+                        </div>
+                        <div class="preset-card" onclick="aiReplaceBg('forest')">
+                            <span class="preset-icon">🌲</span><span class="preset-label">Skov</span>
+                        </div>
+                        <div class="preset-card preset-card-wide" onclick="aiReplaceBg('mountains')">
+                            <span class="preset-icon">⛰️</span><span class="preset-label">Bjerge</span>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <span class="lbl">Eller beskriv selv</span>
+                        <textarea id="replaceBgPrompt" class="inp text-xs" placeholder="Fx: En tropisk strand ved solnedgang..."></textarea>
+                        <button onclick="aiReplaceBg('custom')" class="btn btn-p btn-w mt-2"><i class="fas fa-magic"></i> Erstat baggrund</button>
+                    </div>
+                    <button onclick="showApiModal()" class="btn btn-s btn-w text-[10px]"><i class="fas fa-key"></i> Skift API-nøgle</button>
+                </div>
+
+                <!-- ── Change Clothes ── -->
+                <div id="P_clothes" class="tool-panel hidden">
+                    <div class="panel-title"><i class="fas fa-shirt mr-1"></i> Skift tøj</div>
+                    <p class="text-[11px] text-slate-500 mb-3">AI skifter tøjet på personen i billedet.</p>
+                    <div class="preset-grid mb-3">
+                        <div class="preset-card" onclick="aiClothes('suit')">
+                            <span class="preset-icon">👔</span><span class="preset-label">Jakkesæt</span>
+                        </div>
+                        <div class="preset-card" onclick="aiClothes('casual')">
+                            <span class="preset-icon">👕</span><span class="preset-label">Casual</span>
+                        </div>
+                        <div class="preset-card" onclick="aiClothes('sport')">
+                            <span class="preset-icon">🏃</span><span class="preset-label">Sportstøj</span>
+                        </div>
+                        <div class="preset-card" onclick="aiClothes('formal')">
+                            <span class="preset-icon">👗</span><span class="preset-label">Festtøj</span>
+                        </div>
+                        <div class="preset-card preset-card-wide" onclick="aiClothes('winter')">
+                            <span class="preset-icon">🧥</span><span class="preset-label">Vinterjakke</span>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <span class="lbl">Beskriv selv</span>
+                        <textarea id="clothesPrompt" class="inp text-xs" placeholder="Fx: En rød ballkjole med glitter..."></textarea>
+                        <button onclick="aiClothes('custom')" class="btn btn-p btn-w mt-2"><i class="fas fa-magic"></i> Skift tøj</button>
+                    </div>
+                    <div class="panel-section">
+                        <span class="lbl">Eller upload reference-billede</span>
+                        <input type="file" id="clothesRef" accept="image/*" class="inp text-xs">
+                        <button onclick="aiClothes('ref')" class="btn btn-s btn-w mt-2"><i class="fas fa-upload"></i> Brug reference</button>
+                    </div>
+                    <button onclick="showApiModal()" class="btn btn-s btn-w text-[10px]"><i class="fas fa-key"></i> Skift API-nøgle</button>
+                </div>
+
+                <!-- ── Facebook Creative ── -->
+                <div id="P_fbcreative" class="tool-panel hidden">
+                    <div class="panel-title"><i class="fab fa-facebook mr-1"></i> Facebook Creative</div>
+
+                    <!-- 1. TEKST (øverst) -->
+                    <div class="panel-section" style="background:#181b28;border-radius:10px;padding:12px;border:1px solid #1e2236;">
+                        <span class="lbl" style="margin-bottom:8px">Tekst</span>
+                        <input id="fbText" class="inp mb-3" placeholder="Skriv din tekst her..." style="font-size:13px">
+
+                        <span class="lbl">Størrelse</span>
+                        <div class="flex items-center gap-2 mb-3">
+                            <input type="range" id="fbTextSize" min="12" max="120" value="48" style="flex:1;accent-color:#3b82f6;cursor:pointer">
+                            <span id="fbTextSizeLabel" class="text-xs text-slate-400" style="min-width:32px;text-align:right">48px</span>
+                        </div>
+
+                        <div class="flex gap-3 items-center mb-3">
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] text-slate-500">Tekst</span>
+                                <div class="color-swatch" style="width:26px;height:26px"><input type="color" id="fbTextColor" value="#ffffff"></div>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] text-slate-500">Baggrund</span>
+                                <div class="color-swatch" style="width:26px;height:26px"><input type="color" id="fbTextBg" value="#1877F2"></div>
+                            </div>
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" id="fbTextBgOn" checked style="accent-color:#3b82f6">
+                                <span class="text-[10px] text-slate-400">Bg</span>
+                            </label>
+                        </div>
+
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-[10px] text-slate-500">Hjørner</span>
+                            <button id="fbCornerRound" onclick="setFbCorner('round')" class="btn btn-s text-[10px] px-2" style="background:#2563eb;color:white"><i class="fas fa-circle"></i> Runde</button>
+                            <button id="fbCornerSharp" onclick="setFbCorner('sharp')" class="btn btn-s text-[10px] px-2"><i class="fas fa-square"></i> Skarpe</button>
+                        </div>
+
+                        <button onclick="fbInsertText()" class="btn btn-p btn-w" style="font-size:14px;padding:10px 16px"><i class="fas fa-plus"></i> Sæt ind</button>
+                    </div>
+
+                    <!-- 2. EMOJIS -->
+                    <div class="panel-section">
+                        <span class="lbl">Emojis</span>
+                        <div class="emoji-grid">
+                            <button class="emoji-btn" onclick="addEmoji('🔥')">🔥</button>
+                            <button class="emoji-btn" onclick="addEmoji('⭐')">⭐</button>
+                            <button class="emoji-btn" onclick="addEmoji('💰')">💰</button>
+                            <button class="emoji-btn" onclick="addEmoji('🎉')">🎉</button>
+                            <button class="emoji-btn" onclick="addEmoji('❤️')">❤️</button>
+                            <button class="emoji-btn" onclick="addEmoji('👍')">👍</button>
+                            <button class="emoji-btn" onclick="addEmoji('🎯')">🎯</button>
+                            <button class="emoji-btn" onclick="addEmoji('💥')">💥</button>
+                            <button class="emoji-btn" onclick="addEmoji('✅')">✅</button>
+                            <button class="emoji-btn" onclick="addEmoji('🏷️')">🏷️</button>
+                            <button class="emoji-btn" onclick="addEmoji('📢')">📢</button>
+                            <button class="emoji-btn" onclick="addEmoji('🎁')">🎁</button>
+                            <button class="emoji-btn" onclick="addEmoji('🚀')">🚀</button>
+                            <button class="emoji-btn" onclick="addEmoji('💎')">💎</button>
+                            <button class="emoji-btn" onclick="addEmoji('⚡')">⚡</button>
+                            <button class="emoji-btn" onclick="addEmoji('🏆')">🏆</button>
+                            <button class="emoji-btn" onclick="addEmoji('💪')">💪</button>
+                            <button class="emoji-btn" onclick="addEmoji('📦')">📦</button>
+                        </div>
+                    </div>
+
+                    <!-- 3. FORMER -->
+                    <div class="panel-section">
+                        <span class="lbl">Former</span>
+                        <div class="shape-grid">
+                            <button class="shape-btn" onclick="addShape('rect')" title="Rektangel"><i class="far fa-square"></i></button>
+                            <button class="shape-btn" onclick="addShape('circle')" title="Cirkel"><i class="far fa-circle"></i></button>
+                            <button class="shape-btn" onclick="addShape('badge')" title="Badge"><i class="fas fa-certificate"></i></button>
+                            <button class="shape-btn" onclick="addShape('arrow')" title="Pil"><i class="fas fa-arrow-right"></i></button>
+                            <button class="shape-btn" onclick="addShape('star')" title="Stjerne"><i class="fas fa-star"></i></button>
+                            <button class="shape-btn" onclick="addShape('heart')" title="Hjerte"><i class="fas fa-heart"></i></button>
+                            <button class="shape-btn" onclick="addShape('banner')" title="Banner"><i class="fas fa-ribbon"></i></button>
+                            <button class="shape-btn" onclick="addShape('burst')" title="Eksplosion"><i class="fas fa-explosion"></i></button>
+                        </div>
+                        <div class="flex gap-2 items-center mt-2">
+                            <span class="lbl mb-0">Formfarve</span>
+                            <div class="color-swatch"><input type="color" id="shapeColor" value="#FF4444"></div>
+                        </div>
+                    </div>
+
+                    <!-- 4. BAGGRUND -->
+                    <div class="panel-section">
+                        <span class="lbl">Lærredets baggrundsfarve</span>
+                        <div class="flex gap-2 items-center">
+                            <div class="color-swatch"><input type="color" id="fbBgColor" value="#1877F2"></div>
+                            <button onclick="fbSetBg()" class="btn btn-s text-xs">Sæt baggrund</button>
+                        </div>
+                    </div>
+
+                    <!-- 5. SKABELONER -->
+                    <div class="panel-section">
+                        <span class="lbl">Hurtig-skabeloner</span>
+                        <div class="preset-grid">
+                            <div class="preset-card" onclick="fbPreset('sale')">
+                                <span class="preset-icon">🔥</span><span class="preset-label">Tilbud</span>
+                            </div>
+                            <div class="preset-card" onclick="fbPreset('launch')">
+                                <span class="preset-icon">🚀</span><span class="preset-label">Lancering</span>
+                            </div>
+                            <div class="preset-card" onclick="fbPreset('event')">
+                                <span class="preset-icon">📣</span><span class="preset-label">Event</span>
+                            </div>
+                            <div class="preset-card" onclick="fbPreset('review')">
+                                <span class="preset-icon">⭐</span><span class="preset-label">Anmeldelse</span>
+                            </div>
+                            <div class="preset-card preset-card-wide" onclick="fbPreset('giveaway')">
+                                <span class="preset-icon">🎁</span><span class="preset-label">Giveaway</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FLET-KNAP -->
+                    <div class="panel-section">
+                        <button onclick="flattenFbItems()" id="fbFlattenBtn" class="btn btn-p btn-w text-xs" style="display:none"><i class="fas fa-layer-group"></i> Flet elementer ind i billede</button>
+                    </div>
+                </div>
+
+                <!-- ── Smart Text ── -->
+                <div id="P_smarttext" class="tool-panel hidden">
+                    <div class="panel-title"><i class="fas fa-wand-magic-sparkles mr-1"></i> Smart Tekst</div>
+                    <p class="text-[11px] text-slate-500 mb-3">AI placerer teksten smukt og professionelt på billedet.</p>
+                    <div class="preset-grid mb-3">
+                        <div class="preset-card" onclick="smartTextPreset('ad')">
+                            <span class="preset-icon">📢</span><span class="preset-label">Reklame</span>
+                        </div>
+                        <div class="preset-card" onclick="smartTextPreset('birthday')">
+                            <span class="preset-icon">🎂</span><span class="preset-label">Fødselsdag</span>
+                        </div>
+                        <div class="preset-card" onclick="smartTextPreset('pro')">
+                            <span class="preset-icon">💼</span><span class="preset-label">Professionel</span>
+                        </div>
+                        <div class="preset-card" onclick="smartTextPreset('social')">
+                            <span class="preset-icon">📱</span><span class="preset-label">Social media</span>
+                        </div>
+                        <div class="preset-card preset-card-wide" onclick="smartTextPreset('quote')">
+                            <span class="preset-icon">✨</span><span class="preset-label">Inspirerende citat</span>
+                        </div>
+                    </div>
+                    <div class="panel-section">
+                        <span class="lbl">Din tekst</span>
+                        <textarea id="smartTextVal" class="inp text-xs" placeholder="Skriv den tekst der skal på billedet..."></textarea>
+                    </div>
+                    <div class="panel-section">
+                        <span class="lbl">Stil (valgfri)</span>
+                        <input id="smartTextStyle" class="inp text-xs" placeholder="Fx: moderne, minimalistisk, fed...">
+                    </div>
+                    <button onclick="aiSmartText()" class="btn btn-p btn-w"><i class="fas fa-wand-magic-sparkles"></i> Indsæt tekst med AI</button>
+                    <button onclick="showApiModal()" class="btn btn-s btn-w text-[10px] mt-2"><i class="fas fa-key"></i> Skift API-nøgle</button>
+                </div>
+
+            </div><!-- /side-panel -->
+          </div><!-- /editor-group -->
+        </div><!-- /main content -->
+    </div><!-- /main layout -->
+
+<script>
+// ═══════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════
+const C = document.getElementById('mainCanvas');
+const X = C.getContext('2d');
+let history = [], origFileSize = 0, currentFile = 'billede.jpg';
+let dScale = 1, quality = 0.92;
+let tStyles = { bold: false, italic: false, shadow: false };
+let textItems = [];
+let cropRect = {}, cropDrag = false, cropType = null, cropStart = {}, cropOrig = {};
+
+const GEMINI_MODEL = 'gemini-3.1-flash-image-preview';
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    // White canvas
+    C.width = 1200; C.height = 800;
+    X.fillStyle = '#ffffff';
+    X.fillRect(0, 0, 1200, 800);
+    pushHist();
+    fitCanvas();
+
+    // Tool buttons
+    document.querySelectorAll('.tbtn[data-tool]').forEach(b =>
+        b.addEventListener('click', () => selectTool(b.dataset.tool))
+    );
+
+    // Drag & drop
+    const area = document.getElementById('mainContent');
+    area.addEventListener('dragover', e => { e.preventDefault(); });
+    area.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]); });
+
+    // Quality slider
+    document.getElementById('qSlider').addEventListener('input', e => {
+        quality = e.target.value / 100;
+        document.getElementById('qLabel').textContent = e.target.value + '%';
+        updateSizeEst();
+    });
+
+    // FB text size slider
+    document.getElementById('fbTextSize').addEventListener('input', e => {
+        document.getElementById('fbTextSizeLabel').textContent = e.target.value + 'px';
+    });
+
+    // Klik udenfor FB-elementer = deselect
+    document.addEventListener('mousedown', e => {
+        if (!e.target.closest('.text-item')) deselectAllFb();
+    });
+
+    setupCrop();
+});
+
+// ═══════════════════════════════════════
+//  FILE HANDLING
+// ═══════════════════════════════════════
+function handleUpload(e) { if (e.target.files.length) loadFile(e.target.files[0]); }
+
+function loadFile(file) {
+    if (!file.type.startsWith('image/')) { toast('Vælg en billedfil'); return; }
+    origFileSize = file.size;
+    currentFile = file.name;
+    document.getElementById('fileName').textContent = file.name;
+    const r = new FileReader();
+    r.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+            C.width = img.width; C.height = img.height;
+            X.clearRect(0, 0, C.width, C.height);
+            X.drawImage(img, 0, 0);
+            document.getElementById('uploadOverlay').style.display = 'none';
+            history = []; pushHist(); fitCanvas(); updateSizeEst();
+        };
+        img.src = ev.target.result;
+    };
+    r.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════
+//  CANVAS
+// ═══════════════════════════════════════
+function fitCanvas() {
+    const mc = document.getElementById('mainContent');
+    // Available space = main content area minus toolbar (~64px) and possible side panel (~272px)
+    const sp = document.getElementById('sidePanel');
+    const spW = sp.classList.contains('open') ? 272 : 0;
+    const maxW = mc.clientWidth - 96 - spW - 40;
+    const maxH = mc.clientHeight - 40;
+    dScale = Math.min(1, maxW / C.width, maxH / C.height);
+    C.style.width = (C.width * dScale) + 'px';
+    C.style.height = (C.height * dScale) + 'px';
+    const f = document.getElementById('canvasFrame');
+    f.style.width = (C.width * dScale) + 'px';
+    f.style.height = (C.height * dScale) + 'px';
+}
+window.addEventListener('resize', () => fitCanvas());
+
+function canvasToBase64(mime = 'image/png', q = 1) {
+    return C.toDataURL(mime, q).split(',')[1];
+}
+
+function loadImageOntoCanvas(base64, mime = 'image/png') {
+    return new Promise((res, rej) => {
+        const img = new Image();
+        img.onload = () => {
+            C.width = img.width; C.height = img.height;
+            X.clearRect(0, 0, C.width, C.height);
+            X.drawImage(img, 0, 0);
+            pushHist(); fitCanvas(); res();
+        };
+        img.onerror = rej;
+        img.src = `data:${mime};base64,${base64}`;
+    });
+}
+
+// ═══════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════
+function pushHist() {
+    // Gem canvas + snapshot af FB-elementer
+    const fbSnap = fbItems.map(el => {
+        const clone = el.cloneNode(true);
+        // Gem position som data-attributter så vi kan genskabe
+        clone.setAttribute('data-snap-left', el.style.left);
+        clone.setAttribute('data-snap-top', el.style.top);
+        clone.setAttribute('data-snap-transform', el.style.transform);
+        return clone;
+    });
+    history.push({ d: X.getImageData(0, 0, C.width, C.height), w: C.width, h: C.height, fb: fbSnap });
+    if (history.length > 25) history.shift();
+}
+function restoreFbFromSnap(snaps) {
+    const layer = document.getElementById('textLayer');
+    // Fjern alle nuværende FB-elementer
+    fbItems.forEach(el => el.remove());
+    fbItems = [];
+    if (!snaps || !snaps.length) { showFbFlatten(); return; }
+    layer.style.pointerEvents = 'auto';
+    snaps.forEach(clone => {
+        // Fjern gammel del-btn og genopbyg med frisk event handler
+        const oldDel = clone.querySelector('.del-btn');
+        if (oldDel) oldDel.remove();
+        clone.classList.remove('sel');
+        // Gendan position
+        clone.style.left = clone.getAttribute('data-snap-left') || clone.style.left;
+        clone.style.top = clone.getAttribute('data-snap-top') || clone.style.top;
+        clone.style.transform = clone.getAttribute('data-snap-transform') || clone.style.transform;
+        const del = document.createElement('button'); del.className = 'del-btn'; del.innerHTML = '✕';
+        del.onclick = ev => { ev.stopPropagation(); clone.remove(); fbItems = fbItems.filter(f => f !== clone); showFbFlatten(); pushHist(); };
+        clone.appendChild(del);
+        clone.addEventListener('mousedown', ev => { ev.stopPropagation(); deselectAllFb(); clone.classList.add('sel'); });
+        makeDrag(clone);
+        layer.appendChild(clone);
+        fbItems.push(clone);
+    });
+    showFbFlatten();
+}
+function undo() {
+    if (history.length <= 1) { toast('Intet at fortryde'); return; }
+    history.pop();
+    const p = history[history.length - 1];
+    C.width = p.w; C.height = p.h;
+    X.putImageData(p.d, 0, 0);
+    restoreFbFromSnap(p.fb);
+    fitCanvas(); updateSizeEst(); toast('Fortrudt');
+}
+
+// ═══════════════════════════════════════
+//  TOOL SELECTION
+// ═══════════════════════════════════════
+function selectTool(tool) {
+    document.querySelectorAll('.tbtn[data-tool]').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`.tbtn[data-tool="${tool}"]`);
+    if (btn) btn.classList.add('active');
+    document.querySelectorAll('.tool-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('cropOverlay').classList.remove('on');
+    document.getElementById('textLayer').style.pointerEvents = 'none';
+
+    const panel = document.getElementById('P_' + tool);
+    const sp = document.getElementById('sidePanel');
+    if (panel) { panel.classList.remove('hidden'); sp.classList.add('open'); } else { sp.classList.remove('open'); }
+
+    if (tool === 'crop') activateCrop();
+    if (tool === 'text' || tool === 'fbcreative') document.getElementById('textLayer').style.pointerEvents = 'auto';
+    if (tool === 'resize') updateSizeEst();
+
+    // Refit canvas because panel may have toggled
+    setTimeout(fitCanvas, 50);
+}
+function cancelTool() {
+    document.getElementById('cropOverlay').classList.remove('on');
+    document.querySelectorAll('.tbtn[data-tool]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tool-panel').forEach(p => p.classList.add('hidden'));
+    document.getElementById('sidePanel').classList.remove('open');
+    setTimeout(fitCanvas, 50);
+}
+
+// ═══════════════════════════════════════
+//  CROP
+// ═══════════════════════════════════════
+function activateCrop() {
+    document.getElementById('cropOverlay').classList.add('on');
+    const dw = C.width * dScale, dh = C.height * dScale;
+    cropRect = { x: dw * 0.1, y: dh * 0.1, w: dw * 0.8, h: dh * 0.8 };
+    updCropUI();
+}
+function updCropUI() {
+    const s = document.getElementById('cropSel');
+    s.style.left = cropRect.x + 'px'; s.style.top = cropRect.y + 'px';
+    s.style.width = cropRect.w + 'px'; s.style.height = cropRect.h + 'px';
+    const ow = C.width * dScale, oh = C.height * dScale;
+    const scT = document.getElementById('scT'), scB = document.getElementById('scB');
+    const scL = document.getElementById('scL'), scR = document.getElementById('scR');
+    scT.style.cssText = `left:0;top:0;width:${ow}px;height:${cropRect.y}px`;
+    scB.style.cssText = `left:0;top:${cropRect.y + cropRect.h}px;width:${ow}px;height:${oh - cropRect.y - cropRect.h}px`;
+    scL.style.cssText = `left:0;top:${cropRect.y}px;width:${cropRect.x}px;height:${cropRect.h}px`;
+    scR.style.cssText = `left:${cropRect.x + cropRect.w}px;top:${cropRect.y}px;width:${ow - cropRect.x - cropRect.w}px;height:${cropRect.h}px`;
+    document.getElementById('cropW').value = Math.round(cropRect.w / dScale);
+    document.getElementById('cropH').value = Math.round(cropRect.h / dScale);
+}
+function setupCrop() {
+    const ov = document.getElementById('cropOverlay');
+    ov.addEventListener('mousedown', e => {
+        const r = ov.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+        if (e.target.dataset.h) { cropDrag = true; cropType = e.target.dataset.h; }
+        else if (e.target.id === 'cropSel' || e.target.closest('#cropSel')) { cropDrag = true; cropType = 'move'; }
+        else { cropDrag = true; cropType = 'new'; cropRect.x = mx; cropRect.y = my; cropRect.w = 0; cropRect.h = 0; }
+        cropStart = { x: mx, y: my }; cropOrig = { ...cropRect }; e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+        if (!cropDrag) return;
+        const r = ov.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+        const dx = mx - cropStart.x, dy = my - cropStart.y;
+        const mW = C.width * dScale, mH = C.height * dScale;
+        if (cropType === 'move') {
+            cropRect.x = Math.max(0, Math.min(mW - cropOrig.w, cropOrig.x + dx));
+            cropRect.y = Math.max(0, Math.min(mH - cropOrig.h, cropOrig.y + dy));
+        } else if (cropType === 'new') {
+            cropRect.w = mx - cropRect.x; cropRect.h = my - cropRect.y;
+            if (cropRect.w < 0) { cropRect.x = mx; cropRect.w = Math.abs(cropRect.w); }
+            if (cropRect.h < 0) { cropRect.y = my; cropRect.h = Math.abs(cropRect.h); }
+        } else {
+            if (cropType.includes('l')) { cropRect.x = Math.max(0, cropOrig.x + dx); cropRect.w = cropOrig.w - (cropRect.x - cropOrig.x); }
+            if (cropType.includes('r')) { cropRect.w = Math.max(20, Math.min(mW - cropOrig.x, cropOrig.w + dx)); }
+            if (cropType.includes('t')) { cropRect.y = Math.max(0, cropOrig.y + dy); cropRect.h = cropOrig.h - (cropRect.y - cropOrig.y); }
+            if (cropType.includes('b')) { cropRect.h = Math.max(20, Math.min(mH - cropOrig.y, cropOrig.h + dy)); }
+        }
+        cropRect.x = Math.max(0, cropRect.x); cropRect.y = Math.max(0, cropRect.y);
+        cropRect.w = Math.max(20, Math.min(mW - cropRect.x, cropRect.w));
+        cropRect.h = Math.max(20, Math.min(mH - cropRect.y, cropRect.h));
+        updCropUI();
+    });
+    document.addEventListener('mouseup', () => { cropDrag = false; });
+}
+function applyCrop() {
+    const sx = Math.round(cropRect.x / dScale), sy = Math.round(cropRect.y / dScale);
+    const sw = Math.round(cropRect.w / dScale), sh = Math.round(cropRect.h / dScale);
+    if (sw < 2 || sh < 2) { toast('Vælg et større område'); return; }
+    const d = X.getImageData(sx, sy, sw, sh);
+    C.width = sw; C.height = sh; X.putImageData(d, 0, 0);
+    pushHist(); fitCanvas(); updateSizeEst();
+    document.getElementById('cropOverlay').classList.remove('on');
+    toast('Beskåret!');
+}
+
+// ═══════════════════════════════════════
+//  ROTATE & FLIP
+// ═══════════════════════════════════════
+function rotateImg(deg) {
+    const w = C.width, h = C.height;
+    const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
+    tmp.getContext('2d').drawImage(C, 0, 0);
+    C.width = h; C.height = w; X.save();
+    if (deg === 90) { X.translate(h, 0); X.rotate(Math.PI / 2); }
+    else { X.translate(0, w); X.rotate(-Math.PI / 2); }
+    X.drawImage(tmp, 0, 0); X.restore();
+    pushHist(); fitCanvas(); updateSizeEst();
+    toast(deg > 0 ? 'Roteret højre' : 'Roteret venstre');
+}
+function flipImg(dir) {
+    const w = C.width, h = C.height;
+    const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
+    tmp.getContext('2d').drawImage(C, 0, 0);
+    X.save();
+    if (dir === 'h') { X.translate(w, 0); X.scale(-1, 1); }
+    else { X.translate(0, h); X.scale(1, -1); }
+    X.drawImage(tmp, 0, 0); X.restore();
+    pushHist(); toast(dir === 'h' ? 'Spejlet vandret' : 'Spejlet lodret');
+}
+
+// ═══════════════════════════════════════
+//  TEXT
+// ═══════════════════════════════════════
+function togStyle(s) {
+    tStyles[s] = !tStyles[s];
+    const map = { bold: 'bBold', italic: 'bItalic', shadow: 'bShadow' };
+    const b = document.getElementById(map[s]);
+    b.style.background = tStyles[s] ? '#2563eb' : ''; b.style.color = tStyles[s] ? '#fff' : '';
+}
+function addText() {
+    const txt = document.getElementById('txtVal').value;
+    if (!txt.trim()) { toast('Skriv noget tekst først'); return; }
+    const font = document.getElementById('txtFont').value;
+    const size = parseInt(document.getElementById('txtSize').value);
+    const color = document.getElementById('txtColor').value;
+    const ss = Math.round(size * dScale);
+    const layer = document.getElementById('textLayer');
+    const el = document.createElement('div');
+    el.className = 'text-item';
+    el.style.cssText = `font-family:${font};font-size:${ss}px;color:${color};font-weight:${tStyles.bold ? 'bold' : 'normal'};font-style:${tStyles.italic ? 'italic' : 'normal'};${tStyles.shadow ? 'text-shadow:2px 2px 4px rgba(0,0,0,0.7)' : ''}`;
+    el.textContent = txt;
+    el.style.left = '50%'; el.style.top = '50%'; el.style.transform = 'translate(-50%,-50%)';
+    const del = document.createElement('button'); del.className = 'del-btn'; del.innerHTML = '✕';
+    del.onclick = ev => { ev.stopPropagation(); el.remove(); textItems = textItems.filter(t => t.el !== el); if (!textItems.length) document.getElementById('flattenBtn').style.display = 'none'; };
+    el.appendChild(del);
+    makeDrag(el);
+    layer.appendChild(el);
+    textItems.push({ el, text: txt, font, size, color, bold: tStyles.bold, italic: tStyles.italic, shadow: tStyles.shadow });
+    document.getElementById('flattenBtn').style.display = '';
+    toast('Tekst tilføjet - træk den på plads');
+}
+function makeDrag(el) {
+    let dragging = false, sx, sy, ox, oy;
+    el.addEventListener('mousedown', e => {
+        if (e.target.classList.contains('del-btn')) return;
+        dragging = true; sx = e.clientX; sy = e.clientY;
+        if (el.style.transform.includes('translate(-50%')) {
+            const r = el.getBoundingClientRect(), pr = el.parentElement.getBoundingClientRect();
+            el.style.left = (r.left - pr.left) + 'px'; el.style.top = (r.top - pr.top) + 'px'; el.style.transform = '';
+        }
+        ox = parseInt(el.style.left) || 0; oy = parseInt(el.style.top) || 0;
+        el.classList.add('sel'); e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => { if (!dragging) return; el.style.left = (ox + e.clientX - sx) + 'px'; el.style.top = (oy + e.clientY - sy) + 'px'; });
+    document.addEventListener('mouseup', () => { if (dragging) { dragging = false; pushHist(); } else { dragging = false; } });
+}
+function flattenTexts() {
+    if (!textItems.length) return;
+    pushHist();
+    const cr = C.getBoundingClientRect();
+    textItems.forEach(t => {
+        const r = t.el.getBoundingClientRect();
+        const px = (r.left - cr.left) / dScale, py = (r.top - cr.top) / dScale;
+        let fs = ''; if (t.italic) fs += 'italic '; if (t.bold) fs += 'bold ';
+        fs += t.size + 'px ' + t.font;
+        X.save(); X.font = fs; X.fillStyle = t.color; X.textBaseline = 'top';
+        if (t.shadow) { X.shadowColor = 'rgba(0,0,0,0.7)'; X.shadowBlur = 4; X.shadowOffsetX = 2; X.shadowOffsetY = 2; }
+        X.fillText(t.text, px, py); X.restore();
+        t.el.remove();
+    });
+    textItems = []; document.getElementById('flattenBtn').style.display = 'none';
+    pushHist(); toast('Tekst flettet ind');
+}
+
+// ═══════════════════════════════════════
+//  FILE SIZE
+// ═══════════════════════════════════════
+function updateSizeEst() {
+    if (!C.width) return;
+    C.toBlob(b => {
+        if (!b) return;
+        document.getElementById('sizeLabel').textContent = fmtB(b.size);
+        document.getElementById('newSize').textContent = fmtB(b.size);
+        document.getElementById('origSize').textContent = origFileSize ? fmtB(origFileSize) : '--';
+        if (origFileSize) {
+            const s = Math.max(0, origFileSize - b.size);
+            document.getElementById('savedSize').textContent = `${fmtB(s)} (${Math.round(s / origFileSize * 100)}%)`;
+        }
+    }, 'image/jpeg', quality);
+}
+function fmtB(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(1) + ' KB' : (b / 1048576).toFixed(2) + ' MB'; }
+
+// ═══════════════════════════════════════
+//  DOWNLOAD
+// ═══════════════════════════════════════
+function downloadImage() {
+    if (textItems.length) flattenTexts();
+    if (fbItems.length) flattenFbItems();
+    const hasAlpha = (() => { const d = X.getImageData(0, 0, C.width, C.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] < 255) return true; return false; })();
+    const mime = hasAlpha ? 'image/png' : 'image/jpeg';
+    const ext = hasAlpha ? '.png' : '.jpg';
+    C.toBlob(b => {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+        a.download = currentFile.replace(/\.[^.]+$/, '') + '_redigeret' + ext;
+        a.click(); URL.revokeObjectURL(a.href); toast('Downloadet!');
+    }, mime, mime === 'image/jpeg' ? quality : undefined);
+}
+
+// ═══════════════════════════════════════
+//  GEMINI API
+// ═══════════════════════════════════════
+function getKey() { return localStorage.getItem('gemini_api_key') || ''; }
+function showApiModal() { document.getElementById('apiModal').classList.add('show'); document.getElementById('apiKeyInp').value = getKey(); }
+function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
+function saveApiKey() {
+    const k = document.getElementById('apiKeyInp').value.trim();
+    if (!k) { toast('Indtast en nøgle'); return; }
+    localStorage.setItem('gemini_api_key', k); closeApiModal(); toast('API-nøgle gemt!');
+}
+
+function showLoading(msg) { document.getElementById('loadingText').textContent = msg || 'Arbejder...'; document.getElementById('loadingCover').classList.add('on'); }
+function hideLoading() { document.getElementById('loadingCover').classList.remove('on'); }
+
+async function geminiEdit(prompt, extraImages) {
+    const key = getKey();
+    if (!key) { showApiModal(); throw new Error('no_key'); }
+
+    if (textItems.length) flattenTexts();
+    if (fbItems.length) flattenFbItems();
+
+    const base64 = canvasToBase64('image/png');
+    const parts = [
+        { inlineData: { mimeType: 'image/png', data: base64 } },
+    ];
+    // Extra images (e.g. reference clothing image)
+    if (extraImages) {
+        extraImages.forEach(img => parts.push({ inlineData: { mimeType: img.mime, data: img.data } }));
+    }
+    parts.push({ text: prompt });
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+        })
+    });
+
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || 'API-fejl: ' + resp.status);
+    }
+
+    const data = await resp.json();
+    if (!data.candidates?.[0]?.content?.parts) throw new Error('Tomt svar fra Gemini');
+
+    for (const part of data.candidates[0].content.parts) {
+        if (part.inlineData) {
+            return { base64: part.inlineData.data, mime: part.inlineData.mimeType || 'image/png' };
+        }
+    }
+    // If no image, check for text response (error)
+    for (const part of data.candidates[0].content.parts) {
+        if (part.text) throw new Error('Gemini svarede med tekst: ' + part.text.substring(0, 100));
+    }
+    throw new Error('Intet billede i svaret');
+}
+
+// ═══════════════════════════════════════
+//  AI: REMOVE BACKGROUND
+// ═══════════════════════════════════════
+async function aiRemoveBg(type) {
+    const prompts = {
+        transparent: 'Remove the background from this image completely. Make the background fully transparent. Keep only the main subject with clean edges.',
+        white: 'Remove the background from this image and replace it with a clean, pure white background. Keep only the main subject.',
+        black: 'Remove the background from this image and replace it with a solid black background. Keep only the main subject.',
+        blue: 'Remove the background from this image and replace it with a solid bright blue background (#0066FF). Keep only the main subject.',
+        green: 'Remove the background from this image and replace it with a solid bright green background (#00FF00), like a green screen. Keep only the main subject.',
+    };
+    showLoading('Fjerner baggrund...');
+    try {
+        const result = await geminiEdit(prompts[type]);
+        await loadImageOntoCanvas(result.base64, result.mime);
+        toast('Baggrund fjernet!');
+    } catch (e) { if (e.message !== 'no_key') toast('Fejl: ' + e.message); }
+    finally { hideLoading(); }
+}
+
+// ═══════════════════════════════════════
+//  AI: REPLACE BACKGROUND
+// ═══════════════════════════════════════
+async function aiReplaceBg(type) {
+    const presets = {
+        desert: 'Remove the background from this image and replace it with a beautiful desert landscape with sand dunes and a warm sunset sky. Keep the main subject exactly as it is.',
+        city: 'Remove the background from this image and replace it with a modern big city skyline at dusk with lights and skyscrapers. Keep the main subject exactly as it is.',
+        beach: 'Remove the background from this image and replace it with a tropical beach scene with turquoise water, white sand and palm trees. Keep the main subject exactly as it is.',
+        forest: 'Remove the background from this image and replace it with a lush green forest with tall trees and soft sunlight filtering through leaves. Keep the main subject exactly as it is.',
+        mountains: 'Remove the background from this image and replace it with a dramatic mountain landscape with snow-capped peaks and blue sky. Keep the main subject exactly as it is.',
+    };
+    let prompt;
+    if (type === 'custom') {
+        prompt = document.getElementById('replaceBgPrompt').value.trim();
+        if (!prompt) { toast('Beskriv den baggrund du ønsker'); return; }
+        prompt = `Remove the background from this image and replace it with: ${prompt}. Keep the main subject exactly as it is.`;
+    } else {
+        prompt = presets[type];
+    }
+    showLoading('Erstatter baggrund...');
+    try {
+        const result = await geminiEdit(prompt);
+        await loadImageOntoCanvas(result.base64, result.mime);
+        toast('Baggrund erstattet!');
+    } catch (e) { if (e.message !== 'no_key') toast('Fejl: ' + e.message); }
+    finally { hideLoading(); }
+}
+
+// ═══════════════════════════════════════
+//  AI: CHANGE CLOTHES
+// ═══════════════════════════════════════
+async function aiClothes(type) {
+    const presets = {
+        suit: 'Change the clothes of the person in this image to a professional dark navy blue business suit with a white shirt and tie. Keep the face, pose, and background exactly the same.',
+        casual: 'Change the clothes of the person in this image to a casual outfit: a plain white t-shirt and jeans. Keep the face, pose, and background exactly the same.',
+        sport: 'Change the clothes of the person in this image to athletic sportswear: a modern running outfit with sneakers. Keep the face, pose, and background exactly the same.',
+        formal: 'Change the clothes of the person in this image to an elegant formal evening dress/outfit suitable for a gala. Keep the face, pose, and background exactly the same.',
+        winter: 'Change the clothes of the person in this image to a warm winter outfit: a thick down jacket, scarf, and winter boots. Keep the face, pose, and background exactly the same.',
+    };
+
+    let prompt, extras = null;
+
+    if (type === 'custom') {
+        const desc = document.getElementById('clothesPrompt').value.trim();
+        if (!desc) { toast('Beskriv det tøj du ønsker'); return; }
+        prompt = `Change the clothes of the person in this image to: ${desc}. Keep the face, pose, and background exactly the same.`;
+    } else if (type === 'ref') {
+        const fileInput = document.getElementById('clothesRef');
+        if (!fileInput.files.length) { toast('Upload et reference-billede'); return; }
+        const refB64 = await fileToBase64(fileInput.files[0]);
+        extras = [{ mime: fileInput.files[0].type || 'image/jpeg', data: refB64 }];
+        prompt = 'Change the clothes of the person in the first image to match the clothing shown in the second image. Keep the face, pose, and background from the first image exactly the same.';
+    } else {
+        prompt = presets[type];
+    }
+
+    showLoading('Skifter tøj...');
+    try {
+        const result = await geminiEdit(prompt, extras);
+        await loadImageOntoCanvas(result.base64, result.mime);
+        toast('Tøj ændret!');
+    } catch (e) { if (e.message !== 'no_key') toast('Fejl: ' + e.message); }
+    finally { hideLoading(); }
+}
+
+function fileToBase64(file) {
+    return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+    });
+}
+
+// ═══════════════════════════════════════
+//  AI: SMART TEXT
+// ═══════════════════════════════════════
+function smartTextPreset(type) {
+    const presets = {
+        ad: { text: 'KØB NU - 50% RABAT', style: 'Bold advertising style, eye-catching, modern, with a call-to-action button feel' },
+        birthday: { text: 'Tillykke med fødselsdagen!', style: 'Festive, colorful, fun birthday greeting style with decorative elements' },
+        pro: { text: 'Dit firma navn', style: 'Clean, minimalist, professional business header style, elegant typography' },
+        social: { text: 'Følg os for mere!', style: 'Trendy social media style, bold colors, modern and youthful feel' },
+        quote: { text: 'Livet er det du gør det til', style: 'Elegant inspirational quote style, beautiful script or serif typography, soft and classy' },
+    };
+    const p = presets[type];
+    document.getElementById('smartTextVal').value = p.text;
+    document.getElementById('smartTextStyle').value = p.style;
+    toast('Preset indlæst - tryk "Indsæt tekst med AI"');
+}
+
+async function aiSmartText() {
+    const text = document.getElementById('smartTextVal').value.trim();
+    if (!text) { toast('Skriv den tekst der skal på billedet'); return; }
+    const style = document.getElementById('smartTextStyle').value.trim();
+    let prompt = `Add the following text to this image in a beautiful and professional way: "${text}". `;
+    prompt += 'Place the text where it looks best on the image, with appropriate font, size, color, and positioning. ';
+    prompt += 'The text should be clearly readable and blend well with the image. ';
+    if (style) prompt += `Desired style: ${style}. `;
+    prompt += 'Keep the original image intact and only add the text overlay.';
+
+    showLoading('AI indsætter tekst...');
+    try {
+        const result = await geminiEdit(prompt);
+        await loadImageOntoCanvas(result.base64, result.mime);
+        toast('Tekst indsat!');
+    } catch (e) { if (e.message !== 'no_key') toast('Fejl: ' + e.message); }
+    finally { hideLoading(); }
+}
+
+// ═══════════════════════════════════════
+//  FACEBOOK CREATIVE
+// ═══════════════════════════════════════
+function fbSetBg() {
+    const color = document.getElementById('fbBgColor').value;
+    pushHist();
+    X.fillStyle = color;
+    X.fillRect(0, 0, C.width, C.height);
+    pushHist(); toast('Baggrundsfarve sat');
+}
+
+// ── FB Creative: draggable items ──
+let fbItems = [];
+let fbCornerStyle = 'round'; // 'round' or 'sharp'
+
+function setFbCorner(style) {
+    fbCornerStyle = style;
+    document.getElementById('fbCornerRound').style.background = style === 'round' ? '#2563eb' : '';
+    document.getElementById('fbCornerRound').style.color = style === 'round' ? 'white' : '';
+    document.getElementById('fbCornerSharp').style.background = style === 'sharp' ? '#2563eb' : '';
+    document.getElementById('fbCornerSharp').style.color = style === 'sharp' ? 'white' : '';
+}
+
+function deselectAllFb() {
+    document.querySelectorAll('.text-item.sel').forEach(e => e.classList.remove('sel'));
+}
+
+function addFbItem(el) {
+    const layer = document.getElementById('textLayer');
+    layer.style.pointerEvents = 'auto';
+    el.className = 'text-item';
+    el.style.left = '50%'; el.style.top = '50%'; el.style.transform = 'translate(-50%,-50%)';
+    const del = document.createElement('button'); del.className = 'del-btn'; del.innerHTML = '✕';
+    del.onclick = ev => { ev.stopPropagation(); el.remove(); fbItems = fbItems.filter(f => f !== el); showFbFlatten(); pushHist(); };
+    el.appendChild(del);
+    el.addEventListener('mousedown', ev => { ev.stopPropagation(); deselectAllFb(); el.classList.add('sel'); });
+    makeDrag(el);
+    layer.appendChild(el);
+    fbItems.push(el);
+    el.classList.add('sel');
+    showFbFlatten();
+    pushHist();
+    toast('Element tilføjet - træk det på plads');
+}
+
+function showFbFlatten() {
+    const btn = document.getElementById('fbFlattenBtn');
+    if (btn) btn.style.display = fbItems.length ? '' : 'none';
+}
+
+function addEmoji(emoji) {
+    const size = Math.round(Math.min(C.width, C.height) * 0.12 * dScale);
+    const el = document.createElement('div');
+    el.style.fontSize = size + 'px'; el.style.lineHeight = '1'; el.style.cursor = 'move';
+    el.dataset.fbType = 'emoji'; el.dataset.emoji = emoji; el.dataset.realSize = Math.round(Math.min(C.width, C.height) * 0.12);
+    el.textContent = emoji;
+    addFbItem(el);
+}
+
+function addShape(type) {
+    const color = document.getElementById('shapeColor').value;
+    const dispW = Math.round(C.width * dScale);
+    const dispH = Math.round(C.height * dScale);
+    const sz = Math.round(Math.min(dispW, dispH) * 0.25);
+    const el = document.createElement('div');
+    el.style.cursor = 'move';
+    el.dataset.fbType = 'shape'; el.dataset.shapeType = type; el.dataset.color = color;
+
+    // Draw shape onto a small canvas and use as img
+    const sc = document.createElement('canvas'); sc.width = sz; sc.height = sz;
+    const sx = sc.getContext('2d');
+    sx.fillStyle = color; sx.strokeStyle = color;
+    const cx = sz/2, cy = sz/2, r = sz*0.42;
+
+    switch(type) {
+        case 'rect': sx.fillRect(sz*0.05, sz*0.15, sz*0.9, sz*0.7); break;
+        case 'circle': sx.beginPath(); sx.arc(cx,cy,r,0,Math.PI*2); sx.fill(); break;
+        case 'badge':
+            sx.beginPath();
+            for(let i=0;i<12;i++){const a=i*30*Math.PI/180;const rd=i%2===0?r:r*0.8;const px=cx+Math.cos(a)*rd,py=cy+Math.sin(a)*rd;i===0?sx.moveTo(px,py):sx.lineTo(px,py);}
+            sx.closePath();sx.fill();break;
+        case 'arrow':
+            sx.lineWidth=sz*0.06;sx.beginPath();sx.moveTo(sz*0.15,cy);sx.lineTo(sz*0.75,cy);sx.stroke();
+            sx.beginPath();sx.moveTo(sz*0.75,cy);sx.lineTo(sz*0.6,sz*0.3);sx.moveTo(sz*0.75,cy);sx.lineTo(sz*0.6,sz*0.7);sx.stroke();break;
+        case 'star':
+            sx.beginPath();for(let i=0;i<10;i++){const a=(i*36-90)*Math.PI/180;const rd=i%2===0?r:r*0.4;const px=cx+Math.cos(a)*rd,py=cy+Math.sin(a)*rd;i===0?sx.moveTo(px,py):sx.lineTo(px,py);}
+            sx.closePath();sx.fill();break;
+        case 'heart': {
+            const s=r*0.85;sx.beginPath();sx.moveTo(cx,cy+s);
+            sx.bezierCurveTo(cx-s*2,cy-s*0.5,cx-s*0.5,cy-s*2,cx,cy-s*0.5);
+            sx.bezierCurveTo(cx+s*0.5,cy-s*2,cx+s*2,cy-s*0.5,cx,cy+s);sx.fill();break;}
+        case 'banner': {
+            const bh=sz*0.3,by=cy-bh/2;sx.fillRect(sz*0.05,by,sz*0.9,bh);
+            sx.beginPath();sx.moveTo(sz*0.05,by);sx.lineTo(0,cy);sx.lineTo(sz*0.05,by+bh);
+            sx.moveTo(sz*0.95,by);sx.lineTo(sz,cy);sx.lineTo(sz*0.95,by+bh);sx.fill();break;}
+        case 'burst':
+            sx.beginPath();for(let i=0;i<20;i++){const a=i*18*Math.PI/180;const rd=i%2===0?r:r*0.6;const px=cx+Math.cos(a)*rd,py=cy+Math.sin(a)*rd;i===0?sx.moveTo(px,py):sx.lineTo(px,py);}
+            sx.closePath();sx.fill();break;
+    }
+    const img = document.createElement('img');
+    img.src = sc.toDataURL('image/png');
+    img.style.width = sz+'px'; img.style.height = sz+'px'; img.style.display = 'block'; img.draggable = false;
+    el.appendChild(img);
+    addFbItem(el);
+}
+
+function fbInsertText() {
+    const txt = document.getElementById('fbText').value.trim();
+    if (!txt) { toast('Skriv noget tekst først'); return; }
+    const size = parseInt(document.getElementById('fbTextSize').value);
+    const textColor = document.getElementById('fbTextColor').value;
+    const textBg = document.getElementById('fbTextBg').value;
+    const hasBg = document.getElementById('fbTextBgOn').checked;
+    const rounded = fbCornerStyle === 'round';
+    const scaledSize = Math.round(size * dScale);
+
+    const el = document.createElement('div');
+    el.style.cursor = 'move';
+    el.style.color = textColor;
+    el.style.fontFamily = 'Inter, Arial, sans-serif';
+    el.style.fontSize = scaledSize + 'px';
+    el.style.fontWeight = '700';
+    el.style.lineHeight = '1.2';
+    el.textContent = txt;
+
+    el.dataset.fbType = 'text'; el.dataset.textType = 'custom'; el.dataset.text = txt;
+    el.dataset.textColor = textColor;
+    el.dataset.hasBg = hasBg ? '1' : '0';
+    el.dataset.textBg = textBg;
+    el.dataset.rounded = rounded ? '1' : '0';
+    el.dataset.realSize = size;
+
+    if (hasBg) {
+        el.style.background = textBg;
+        el.style.padding = Math.round(scaledSize * 0.2) + 'px ' + Math.round(scaledSize * 0.4) + 'px';
+        el.style.borderRadius = rounded ? '10px' : '0px';
+    } else {
+        el.style.textShadow = '2px 2px 6px rgba(0,0,0,0.5)';
+    }
+
+    addFbItem(el);
+}
+
+// Keep old fbAddText for preset templates
+function fbAddText(type) {
+    const txt = document.getElementById('fbText').value.trim();
+    if (!txt) { toast('Skriv noget tekst først'); return; }
+    fbInsertText();
+}
+
+function flattenFbItems() {
+    if (!fbItems.length) return;
+    pushHist();
+    const cr = C.getBoundingClientRect();
+    fbItems.forEach(el => {
+        // Resolve centered position
+        if (el.style.transform.includes('translate(-50%')) {
+            const r = el.getBoundingClientRect(), pr = el.parentElement.getBoundingClientRect();
+            el.style.left = (r.left - pr.left) + 'px'; el.style.top = (r.top - pr.top) + 'px'; el.style.transform = '';
+        }
+        const r = el.getBoundingClientRect();
+        const px = (r.left - cr.left) / dScale;
+        const py = (r.top - cr.top) / dScale;
+        const pw = r.width / dScale;
+        const ph = r.height / dScale;
+
+        const type = el.dataset.fbType;
+        if (type === 'emoji') {
+            X.font = el.dataset.realSize + 'px serif';
+            X.textBaseline = 'top';
+            X.fillText(el.dataset.emoji, px, py);
+            X.textBaseline = 'alphabetic';
+        } else if (type === 'shape') {
+            // Draw shape image onto canvas
+            const img = el.querySelector('img');
+            if (img) X.drawImage(img, px, py, pw, ph);
+        } else if (type === 'text') {
+            const tt = el.dataset.textType;
+            const hasBg = el.dataset.hasBg === '1';
+            const textBg = el.dataset.textBg;
+            const textColor = el.dataset.textColor || '#ffffff';
+
+            const isRounded = el.dataset.rounded === '1';
+
+            // Draw background box if enabled
+            if (hasBg || tt === 'cta') {
+                const bgColor = (tt === 'cta' && !hasBg) ? '#ffffff' : textBg;
+                const rad = isRounded ? (tt === 'cta' ? ph / 2 : Math.min(10 / dScale, ph * 0.2)) : 0;
+                X.fillStyle = bgColor;
+                if (rad > 0) {
+                    X.beginPath();
+                    X.moveTo(px+rad, py); X.lineTo(px+pw-rad, py);
+                    X.arc(px+pw-rad, py+rad, rad, -Math.PI/2, Math.PI/2);
+                    X.lineTo(px+rad, py+ph);
+                    X.arc(px+rad, py+rad, rad, Math.PI/2, -Math.PI/2);
+                    X.closePath(); X.fill();
+                } else {
+                    X.fillRect(px, py, pw, ph);
+                }
+            }
+
+            const realSize = el.dataset.realSize ? parseInt(el.dataset.realSize) : Math.round(ph * 0.75);
+            X.font = `700 ${realSize}px Inter, Arial, sans-serif`;
+            X.fillStyle = textColor; X.textBaseline = 'top';
+            if (!hasBg) { X.shadowColor = 'rgba(0,0,0,0.5)'; X.shadowBlur = 6; X.shadowOffsetX = 2; X.shadowOffsetY = 2; }
+            const padX = hasBg ? Math.round(realSize * 0.4) : 0;
+            const padY = hasBg ? Math.round(realSize * 0.2) : 0;
+            X.fillText(el.dataset.text, px + padX, py + padY);
+            X.shadowColor = 'transparent'; X.shadowBlur = 0; X.shadowOffsetX = 0; X.shadowOffsetY = 0;
+            X.textBaseline = 'alphabetic';
+        }
+        el.remove();
+    });
+    fbItems = [];
+    showFbFlatten();
+    pushHist();
+    toast('Elementer flettet ind i billedet');
+}
+
+function fbPreset(type) {
+    pushHist();
+    const w = C.width, h = C.height;
+    X.textAlign = 'center'; X.textBaseline = 'middle';
+
+    // Clear canvas first
+    const presets = {
+        sale: {
+            bg: ['#FF4136', '#FF851B'],
+            title: '🔥 STORT UDSALG',
+            sub: 'Op til 70% rabat på alt!',
+            cta: 'KØB NU',
+            accent: '#FFF200'
+        },
+        launch: {
+            bg: ['#0D1B2A', '#1B2838'],
+            title: '🚀 NY LANCERING',
+            sub: 'Oplev det helt nye produkt',
+            cta: 'LÆS MERE',
+            accent: '#00D4FF'
+        },
+        event: {
+            bg: ['#6B21A8', '#A855F7'],
+            title: '📣 STORT EVENT',
+            sub: 'Sæt kryds i kalenderen!',
+            cta: 'TILMELD DIG',
+            accent: '#FDE68A'
+        },
+        review: {
+            bg: ['#064E3B', '#059669'],
+            title: '⭐⭐⭐⭐⭐',
+            sub: '"Det bedste produkt jeg har prøvet!"',
+            cta: 'SE ANMELDELSER',
+            accent: '#FCD34D'
+        },
+        giveaway: {
+            bg: ['#BE185D', '#EC4899'],
+            title: '🎁 GIVEAWAY!',
+            sub: 'Vind fantastiske præmier',
+            cta: 'DELTAG NU',
+            accent: '#FDE68A'
+        }
+    };
+
+    const p = presets[type];
+    // Gradient background
+    const grad = X.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, p.bg[0]); grad.addColorStop(1, p.bg[1]);
+    X.fillStyle = grad; X.fillRect(0, 0, w, h);
+
+    // Decorative circles
+    X.globalAlpha = 0.08;
+    X.fillStyle = '#ffffff';
+    X.beginPath(); X.arc(w * 0.1, h * 0.15, w * 0.2, 0, Math.PI * 2); X.fill();
+    X.beginPath(); X.arc(w * 0.9, h * 0.85, w * 0.25, 0, Math.PI * 2); X.fill();
+    X.globalAlpha = 1;
+
+    // Title
+    X.fillStyle = '#ffffff';
+    X.font = `900 ${Math.round(w * 0.075)}px Inter, Arial, sans-serif`;
+    X.shadowColor = 'rgba(0,0,0,0.3)'; X.shadowBlur = 10;
+    X.fillText(p.title, w / 2, h * 0.32);
+    X.shadowBlur = 0; X.shadowColor = 'transparent';
+
+    // Subtitle
+    X.font = `400 ${Math.round(w * 0.032)}px Inter, Arial, sans-serif`;
+    X.fillStyle = 'rgba(255,255,255,0.9)';
+    X.fillText(p.sub, w / 2, h * 0.48);
+
+    // Accent line
+    X.fillStyle = p.accent;
+    X.fillRect(w * 0.35, h * 0.56, w * 0.3, 3);
+
+    // CTA button
+    const bw = Math.min(w * 0.38, 320), bh = Math.round(h * 0.075);
+    const bx = w / 2 - bw / 2, by = h * 0.66;
+    X.fillStyle = '#ffffff';
+    X.beginPath();
+    const rad = bh / 2;
+    X.moveTo(bx + rad, by); X.lineTo(bx + bw - rad, by);
+    X.arc(bx + bw - rad, by + rad, rad, -Math.PI / 2, Math.PI / 2);
+    X.lineTo(bx + rad, by + bh);
+    X.arc(bx + rad, by + rad, rad, Math.PI / 2, -Math.PI / 2);
+    X.closePath(); X.fill();
+
+    X.fillStyle = p.bg[0];
+    X.font = `800 ${Math.round(bh * 0.5)}px Inter, Arial, sans-serif`;
+    X.fillText(p.cta, w / 2, by + bh / 2);
+
+    X.textAlign = 'start'; X.textBaseline = 'alphabetic';
+    pushHist();
+    toast('Facebook Creative skabelon anvendt!');
+}
+
+// ═══════════════════════════════════════
+//  BG REPLACE MODAL (for manual upload)
+// ═══════════════════════════════════════
+function closeBgModal() { document.getElementById('bgModal').classList.remove('show'); }
+function applyBgColor() {
+    const c = document.getElementById('bgColor').value;
+    const d = X.getImageData(0, 0, C.width, C.height);
+    const tmp = document.createElement('canvas'); tmp.width = C.width; tmp.height = C.height;
+    tmp.getContext('2d').putImageData(d, 0, 0);
+    X.fillStyle = c; X.fillRect(0, 0, C.width, C.height);
+    X.drawImage(tmp, 0, 0); pushHist(); closeBgModal(); toast('Baggrund ændret');
+}
+function applyBgImage(e) {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+            const d = X.getImageData(0, 0, C.width, C.height);
+            const tmp = document.createElement('canvas'); tmp.width = C.width; tmp.height = C.height;
+            tmp.getContext('2d').putImageData(d, 0, 0);
+            const sc = Math.max(C.width / img.width, C.height / img.height);
+            const bw = img.width * sc, bh = img.height * sc;
+            X.clearRect(0, 0, C.width, C.height);
+            X.drawImage(img, (C.width - bw) / 2, (C.height - bh) / 2, bw, bh);
+            X.drawImage(tmp, 0, 0);
+            pushHist(); closeBgModal(); toast('Baggrundsbillede tilføjet');
+        };
+        img.src = ev.target.result;
+    };
+    r.readAsDataURL(f);
+}
+
+// ═══════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
