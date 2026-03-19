@@ -6,41 +6,97 @@
     <title>Mini Photoshop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "neon-blue": "#00e5ff",
+                        "neon-fuchsia": "#ff00ff",
+                        "light-grey": "#f0f2f5"
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        :root {
+            --electric-blue: #00e5ff;
+            --fuchsia-neon: #ff00ff;
+            --canvas-bg: #f0f2f5;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: #0c0e14; color: #e2e8f0; overflow: hidden; height: 100vh; }
+        body { font-family: 'Quicksand', sans-serif; background: var(--canvas-bg); color: #334155; overflow: hidden; height: 100vh; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+        /* ── Glass panel base ── */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+
+        /* ── Neon glow effects ── */
+        .neon-glow-blue { filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.5)); }
+        .neon-glow-fuchsia { filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.5)); }
+
+        /* ── Gradient text ── */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--electric-blue), var(--fuchsia-neon));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ── Background blobs ── */
+        .bg-blob-blue {
+            position: fixed; width: 400px; height: 400px; border-radius: 50%;
+            background: var(--electric-blue); opacity: 0.08; filter: blur(120px); pointer-events: none;
+        }
+        .bg-blob-fuchsia {
+            position: fixed; width: 400px; height: 400px; border-radius: 50%;
+            background: var(--fuchsia-neon); opacity: 0.08; filter: blur(120px); pointer-events: none;
+        }
 
         /* ── Main content wrapper ── */
         .main-content {
             flex: 1; display: flex; align-items: center; justify-content: center;
-            background: #0f1119; overflow: hidden;
+            background: transparent; overflow: hidden; position: relative;
         }
         .editor-group {
-            display: flex; align-items: stretch; max-height: 100%;
+            display: flex; align-items: center; max-height: 100%; gap: 16px;
         }
 
-        /* ── Toolbar (vertical left, tight to canvas) ── */
+        /* ── Toolbar (vertical left, floating) ── */
         .toolbar {
-            display: flex; flex-direction: column; gap: 3px; padding: 8px;
-            background: #12141c; border-right: 1px solid #1a1d2a;
+            display: flex; flex-direction: column; gap: 4px; padding: 10px;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
             overflow-y: auto; align-items: center;
-            border-radius: 12px 0 0 12px;
+            border-radius: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
         }
-        .tool-group { display: flex; flex-direction: column; gap: 3px; width: 100%; }
-        .tool-group + .tool-group { border-top: 1px solid #1e2130; padding-top: 8px; margin-top: 4px; }
+        .tool-group { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .tool-group + .tool-group { border-top: 1px solid rgba(0,0,0,0.06); padding-top: 8px; margin-top: 4px; }
         .tbtn {
-            width: 68px; height: 62px; padding: 0; display: flex; flex-direction: column;
+            width: 70px; height: 64px; padding: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: center; gap: 5px;
-            border-radius: 12px; cursor: pointer; transition: all 0.12s;
-            color: #8892a8; border: none; background: transparent; font-size: 10px; font-weight: 600; white-space: nowrap;
+            border-radius: 1.2rem; cursor: pointer; transition: all 0.2s;
+            color: #94a3b8; border: none; background: transparent; font-size: 10px; font-weight: 700; white-space: nowrap;
         }
-        .tbtn i { font-size: 22px; }
-        .tbtn:hover { background: #1a1d2e; color: #c8d0e0; }
-        .tbtn.active { background: #2563eb; color: white; }
+        .tbtn i { font-size: 20px; }
+        .tbtn:hover { background: rgba(0, 229, 255, 0.08); color: #475569; transform: scale(1.05); }
+        .tbtn.active {
+            background: linear-gradient(135deg, var(--electric-blue), var(--fuchsia-neon));
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 229, 255, 0.35);
+        }
 
         /* ── Canvas ── */
         .canvas-area {
@@ -48,77 +104,103 @@
         }
         .canvas-frame {
             position: relative;
-            box-shadow: 0 4px 40px rgba(0,0,0,0.5);
-            background: repeating-conic-gradient(#e0e0e0 0% 25%, #fff 0% 50%) 50%/16px 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.04);
+            background: repeating-conic-gradient(#e8eaed 0% 25%, #fff 0% 50%) 50%/16px 16px;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 6px solid white;
         }
         #mainCanvas { display: block; }
 
         /* ── Side Panel (tight to canvas right) ── */
         .side-panel {
-            width: 272px; min-width: 272px; background: #12141c; border-left: 1px solid #1a1d2a;
-            overflow-y: auto; padding: 14px; display: none;
-            border-radius: 0 12px 12px 0;
+            width: 280px; min-width: 280px;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            overflow-y: auto; padding: 16px; display: none;
+            border-radius: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
         }
         .side-panel.open { display: block; }
-        .panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #4f5a72; margin-bottom: 10px; }
+        .panel-title {
+            font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--electric-blue), var(--fuchsia-neon));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
         .panel-section { margin-bottom: 16px; }
 
         /* ── Preset cards ── */
         .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
         .preset-card {
             display: flex; flex-direction: column; align-items: center; gap: 4px;
-            padding: 10px 6px; border-radius: 10px; cursor: pointer;
-            background: #181b28; border: 1px solid #1e2236;
-            transition: all 0.12s; text-align: center;
+            padding: 10px 6px; border-radius: 1rem; cursor: pointer;
+            background: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.8);
+            transition: all 0.2s; text-align: center;
+            backdrop-filter: blur(8px);
         }
-        .preset-card:hover { border-color: #3b82f6; background: #1c2038; transform: translateY(-1px); }
-        .preset-card.active { border-color: #3b82f6; background: #1e2a4a; }
+        .preset-card:hover { border-color: var(--electric-blue); background: rgba(0,229,255,0.08); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,229,255,0.15); }
+        .preset-card.active { border-color: var(--electric-blue); background: rgba(0,229,255,0.12); }
         .preset-card .preset-icon { font-size: 22px; line-height: 1; }
-        .preset-card .preset-label { font-size: 10px; font-weight: 600; color: #8892a8; }
+        .preset-card .preset-label { font-size: 10px; font-weight: 700; color: #64748b; }
         .preset-card-wide { grid-column: 1 / -1; flex-direction: row; gap: 8px; justify-content: center; }
 
         /* ── Inputs ── */
         .inp {
-            width: 100%; padding: 7px 10px; background: #181b28; border: 1px solid #1e2236;
-            border-radius: 8px; color: #e2e8f0; font-size: 12px; outline: none; transition: border-color 0.12s;
+            width: 100%; padding: 8px 12px;
+            background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 1rem; color: #334155; font-size: 12px; outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: 'Quicksand', sans-serif; font-weight: 600;
         }
-        .inp:focus { border-color: #3b82f6; }
+        .inp:focus { border-color: var(--electric-blue); box-shadow: 0 0 0 3px rgba(0,229,255,0.15); }
         select.inp { cursor: pointer; }
-        textarea.inp { resize: vertical; min-height: 60px; font-family: inherit; }
-        .lbl { font-size: 11px; color: #5a6580; margin-bottom: 4px; display: block; font-weight: 500; }
+        textarea.inp { resize: vertical; min-height: 60px; border-radius: 1rem; }
+        .lbl { font-size: 11px; color: #64748b; margin-bottom: 4px; display: block; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 
         .btn {
-            padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
-            cursor: pointer; border: none; transition: all 0.12s; display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px; border-radius: 1.5rem; font-size: 12px; font-weight: 700;
+            cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+            font-family: 'Quicksand', sans-serif;
         }
-        .btn-p { background: #2563eb; color: white; }
-        .btn-p:hover { background: #1d4ed8; }
-        .btn-s { background: #181b28; color: #c8d0e0; border: 1px solid #1e2236; }
-        .btn-s:hover { background: #1e2236; }
-        .btn-d { background: #dc2626; color: white; }
+        .btn-p {
+            background: linear-gradient(135deg, var(--electric-blue), var(--fuchsia-neon));
+            color: white;
+            box-shadow: 0 4px 16px rgba(0,229,255,0.3);
+        }
+        .btn-p:hover { brightness: 1.1; box-shadow: 0 6px 24px rgba(0,229,255,0.4); transform: translateY(-1px); }
+        .btn-s {
+            background: rgba(255,255,255,0.7); color: #475569;
+            border: 1px solid rgba(0,0,0,0.08);
+            backdrop-filter: blur(8px);
+        }
+        .btn-s:hover { background: rgba(255,255,255,0.9); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .btn-d { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
         .btn-w { width: 100%; justify-content: center; }
 
         .color-swatch {
-            width: 32px; height: 32px; border-radius: 8px; border: 2px solid #1e2236;
+            width: 32px; height: 32px; border-radius: 1rem; border: 2px solid rgba(0,0,0,0.08);
             cursor: pointer; overflow: hidden; padding: 0; position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
         .color-swatch input[type="color"] { width: 44px; height: 44px; border: none; padding: 0; cursor: pointer; margin: -6px; }
 
         /* ── Quality track ── */
         .quality-track { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(to right, #ef4444 0%, #ef4444 40%, #eab308 40%, #eab308 80%, #22c55e 80%, #22c55e 100%); margin: 6px 0; }
         .q-slider { -webkit-appearance: none; width: 100%; height: 8px; background: transparent; position: absolute; top: 0; left: 0; margin: 0; cursor: pointer; }
-        .q-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: white; border: 3px solid #2563eb; cursor: pointer; margin-top: -4px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+        .q-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: white; border: 3px solid var(--electric-blue); cursor: pointer; margin-top: -5px; box-shadow: 0 2px 8px rgba(0,229,255,0.4); }
 
         /* ── Crop ── */
         .crop-overlay { position: absolute; inset: 0; display: none; }
         .crop-overlay.on { display: block; }
-        .crop-scrim { position: absolute; background: rgba(0,0,0,0.55); }
-        .crop-sel { position: absolute; border: 2px dashed #3b82f6; background: rgba(59,130,246,0.06); cursor: move; }
-        .crop-h { position: absolute; width: 10px; height: 10px; background: #3b82f6; border: 2px solid white; border-radius: 2px; }
-        .crop-h.tl { top: -5px; left: -5px; cursor: nw-resize; }
-        .crop-h.tr { top: -5px; right: -5px; cursor: ne-resize; }
-        .crop-h.bl { bottom: -5px; left: -5px; cursor: sw-resize; }
-        .crop-h.br { bottom: -5px; right: -5px; cursor: se-resize; }
+        .crop-scrim { position: absolute; background: rgba(0,0,0,0.35); }
+        .crop-sel { position: absolute; border: 2px dashed var(--electric-blue); background: rgba(0,229,255,0.06); cursor: move; }
+        .crop-h { position: absolute; width: 12px; height: 12px; background: white; border: 3px solid var(--electric-blue); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,229,255,0.4); }
+        .crop-h.tl { top: -6px; left: -6px; cursor: nw-resize; }
+        .crop-h.tr { top: -6px; right: -6px; cursor: ne-resize; }
+        .crop-h.bl { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .crop-h.br { bottom: -6px; right: -6px; cursor: se-resize; }
 
         /* ── Text items ── */
         .text-layer { position: absolute; inset: 0; pointer-events: none; }
@@ -126,34 +208,47 @@
             position: absolute; cursor: move; user-select: none; padding: 2px 6px;
             border: 2px solid transparent; border-radius: 3px; white-space: nowrap;
         }
-        .text-item.sel { border-color: #3b82f6; }
+        .text-item.sel { border-color: var(--electric-blue); }
         .text-item .del-btn {
-            position: absolute; top: -10px; right: -10px; width: 20px; height: 20px;
-            background: #dc2626; color: white; border-radius: 50%; border: none;
+            position: absolute; top: -10px; right: -10px; width: 22px; height: 22px;
+            background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border-radius: 50%; border: 2px solid white;
             font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(239,68,68,0.4);
         }
         .text-item.sel .del-btn { display: flex; }
 
         /* ── Modal ── */
-        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 999; }
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 999; }
         .modal-bg.show { display: flex; }
-        .modal { background: #161822; border: 1px solid #1e2236; border-radius: 14px; padding: 20px; max-width: 400px; width: 92%; }
+        .modal {
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.8); border-radius: 2rem;
+            padding: 24px; max-width: 420px; width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
 
         /* ── Loading overlay ── */
         .loading-cover {
-            position: absolute; inset: 0; background: rgba(12,14,20,0.85);
+            position: absolute; inset: 0; background: rgba(240,242,245,0.85);
+            backdrop-filter: blur(8px);
             display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; z-index: 50;
+            border-radius: 1rem;
         }
         .loading-cover.on { display: flex; }
-        .spin { width: 32px; height: 32px; border: 3px solid #1e2236; border-top-color: #3b82f6; border-radius: 50%; animation: sp 0.6s linear infinite; }
+        .spin {
+            width: 36px; height: 36px; border: 3px solid rgba(0,229,255,0.2);
+            border-top-color: var(--electric-blue); border-radius: 50%; animation: sp 0.6s linear infinite;
+        }
         @keyframes sp { to { transform: rotate(360deg); } }
 
         /* ── Toast ── */
         .toast {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
-            background: #1e293b; color: #e2e8f0; padding: 10px 22px; border-radius: 10px;
-            font-size: 12px; font-weight: 600; box-shadow: 0 6px 28px rgba(0,0,0,0.5);
-            transition: transform 0.25s ease; z-index: 1000; border: 1px solid #2d3148;
+            background: rgba(255,255,255,0.85); backdrop-filter: blur(12px);
+            color: #334155; padding: 12px 24px; border-radius: 2rem;
+            font-size: 13px; font-weight: 700; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease; z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.8);
         }
         .toast.show { transform: translateX(-50%) translateY(0); }
 
@@ -161,30 +256,47 @@
         .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
         .emoji-btn {
             width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-            font-size: 20px; background: #181b28; border: 1px solid #1e2236; border-radius: 8px;
-            cursor: pointer; transition: all 0.1s;
+            font-size: 20px; background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 1rem;
+            cursor: pointer; transition: all 0.2s;
         }
-        .emoji-btn:hover { background: #1e2a4a; border-color: #3b82f6; transform: scale(1.1); }
+        .emoji-btn:hover { background: rgba(0,229,255,0.1); border-color: var(--electric-blue); transform: scale(1.1); }
 
         /* ── Sticker shapes ── */
         .shape-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
         .shape-btn {
             aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-            font-size: 18px; background: #181b28; border: 1px solid #1e2236; border-radius: 8px;
-            cursor: pointer; color: #6b7a99; transition: all 0.1s;
+            font-size: 18px; background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.06); border-radius: 1rem;
+            cursor: pointer; color: #94a3b8; transition: all 0.2s;
         }
-        .shape-btn:hover { background: #1e2a4a; border-color: #3b82f6; color: #93a3c0; }
+        .shape-btn:hover { background: rgba(0,229,255,0.1); border-color: var(--electric-blue); color: #475569; }
+
+        /* ── Info box styling ── */
+        .info-box {
+            background: rgba(255,255,255,0.6); backdrop-filter: blur(8px);
+            border-radius: 1rem; padding: 12px; border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        /* ── FB section panel ── */
+        .fb-section {
+            background: rgba(255,255,255,0.5); backdrop-filter: blur(8px);
+            border-radius: 1.2rem; padding: 14px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
     </style>
 </head>
 <body>
+    <!-- Background decorative blobs -->
+    <div class="bg-blob-blue" style="top:15%;left:10%"></div>
+    <div class="bg-blob-fuchsia" style="bottom:15%;right:10%"></div>
+
     <div id="toast" class="toast"></div>
 
     <!-- ── Gemini API Key Modal ── -->
     <div id="apiModal" class="modal-bg">
         <div class="modal">
-            <h2 class="text-base font-bold mb-1">Google Gemini API-nøgle</h2>
+            <h2 class="text-base font-bold mb-1 gradient-text">Google Gemini API-nøgle</h2>
             <p class="text-xs text-slate-400 mb-3">Du skal bruge en Gemini API-nøgle til AI-funktionerne. Den er gratis at oprette.</p>
-            <a href="https://aistudio.google.com/apikey" target="_blank" class="text-blue-400 text-xs hover:underline block mb-3">
+            <a href="https://aistudio.google.com/apikey" target="_blank" class="text-neon-blue text-xs hover:underline block mb-3">
                 <i class="fas fa-external-link-alt mr-1"></i> Hent gratis API-nøgle fra Google AI Studio
             </a>
             <input id="apiKeyInp" type="text" class="inp mb-3" placeholder="Indsæt din Gemini API-nøgle...">
@@ -198,7 +310,7 @@
     <!-- ── BG Replace Modal ── -->
     <div id="bgModal" class="modal-bg">
         <div class="modal">
-            <h2 class="text-base font-bold mb-3">Vælg ny baggrund</h2>
+            <h2 class="text-base font-bold mb-3 gradient-text">Vælg ny baggrund</h2>
             <div class="space-y-3">
                 <div>
                     <span class="lbl">Ensfarvet baggrund</span>
@@ -207,7 +319,7 @@
                         <button onclick="applyBgColor()" class="btn btn-p text-xs">Brug farve</button>
                     </div>
                 </div>
-                <div class="border-t border-[#1e2236] pt-3">
+                <div class="border-t border-black/5 pt-3">
                     <span class="lbl">Upload baggrundsbillede</span>
                     <input type="file" id="bgImgUpload" accept="image/*" class="inp text-xs" onchange="applyBgImage(event)">
                 </div>
@@ -216,31 +328,28 @@
         </div>
     </div>
 
-    <!-- ═══ MAIN LAYOUT ═══ -->
+    <!-- MAIN LAYOUT -->
     <div class="flex flex-col h-screen">
 
         <!-- ── Top bar ── -->
-        <div class="flex items-center justify-between px-4 py-2 bg-[#12141c] border-b border-[#1a1d2a]">
-            <div class="flex items-center gap-2">
+        <div class="flex items-center justify-between px-5 py-2.5 glass-panel border-b border-white/50" style="z-index:40">
+            <div class="flex items-center gap-3">
                 <label class="btn btn-s text-xs cursor-pointer">
-                    <i class="fas fa-upload"></i> Upload
+                    <span class="material-symbols-outlined text-neon-blue" style="font-size:18px">upload</span> Upload
                     <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleUpload(event)">
                 </label>
-                <span id="fileName" class="text-[10px] text-slate-600 ml-1"></span>
+                <span id="fileName" class="text-[10px] text-slate-400 ml-1 font-bold"></span>
             </div>
-            <div class="flex items-center gap-2.5">
-                <svg width="26" height="26" viewBox="0 0 28 28" fill="none" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="22" height="22" rx="3"/>
-                    <circle cx="10" cy="11" r="2.5"/>
-                    <path d="M3 20l6-6 4 4 3-3 9 9"/>
-                    <path d="M19 3v4h4"/>
-                </svg>
-                <span class="font-bold text-base tracking-wide" style="color:#e2e8f0">Mini Photoshop</span>
-                <span class="text-base" style="color:#64748b;margin-left:4px">af Anders Bæk</span>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-gradient-to-tr from-neon-blue to-neon-fuchsia rounded-full flex items-center justify-center shadow-lg neon-glow-blue">
+                    <span class="material-symbols-outlined text-white" style="font-size:20px">auto_awesome</span>
+                </div>
+                <span class="font-extrabold text-base tracking-wide gradient-text">Mini Photoshop</span>
+                <span class="text-sm font-bold text-slate-400">af Anders Bæk</span>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="undo()" class="btn btn-s text-xs"><i class="fas fa-undo"></i> Fortryd</button>
-                <button onclick="downloadImage()" class="btn btn-p text-xs"><i class="fas fa-download"></i> Download</button>
+                <button onclick="undo()" class="btn btn-s text-xs"><span class="material-symbols-outlined" style="font-size:16px">undo</span> Fortryd</button>
+                <button onclick="downloadImage()" class="btn btn-p text-xs neon-glow-blue"><span class="material-symbols-outlined" style="font-size:16px">download</span> Download</button>
             </div>
         </div>
 
@@ -271,10 +380,10 @@
             <div class="canvas-area" id="canvasArea">
                 <!-- Upload overlay når lærred er tomt -->
                 <label id="uploadOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10">
-                    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:40px 56px;border-radius:20px;border:2px dashed #3b82f6;background:transparent;transition:background 0.2s,box-shadow 0.2s" onmouseover="this.style.background='rgba(59,130,246,0.1)';this.style.boxShadow='0 0 24px rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent';this.style.boxShadow='none'">
-                        <i class="fas fa-cloud-arrow-up" style="font-size:44px;color:#3b82f6"></i>
-                        <span style="font-size:17px;font-weight:600;color:#e2e8f0">Upload billede</span>
-                        <span style="font-size:11px;color:#64748b">Eller træk et billede hertil</span>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:44px 60px;border-radius:2rem;border:2px dashed #00e5ff;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px);transition:all 0.3s" onmouseover="this.style.background='rgba(0,229,255,0.08)';this.style.boxShadow='0 0 40px rgba(0,229,255,0.15)';this.style.transform='scale(1.02)'" onmouseout="this.style.background='rgba(255,255,255,0.5)';this.style.boxShadow='none';this.style.transform='scale(1)'">
+                        <span class="material-symbols-outlined neon-glow-blue" style="font-size:52px;color:#00e5ff">cloud_upload</span>
+                        <span style="font-size:17px;font-weight:800;background:linear-gradient(135deg,#00e5ff,#ff00ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Upload billede</span>
+                        <span style="font-size:11px;color:#94a3b8;font-weight:600">Eller træk et billede hertil</span>
                     </div>
                     <input type="file" accept="image/*" class="hidden" onchange="handleUpload(event)">
                 </label>
@@ -292,23 +401,23 @@
                 </div>
                 <div class="loading-cover" id="loadingCover">
                     <div class="spin"></div>
-                    <span class="text-sm text-slate-400" id="loadingText">Arbejder...</span>
+                    <span class="text-sm text-slate-500 font-bold" id="loadingText">Arbejder...</span>
                 </div>
             </div>
 
-            <!-- ═══ SIDE PANEL (højre, tæt på lærred) ═══ -->
+            <!-- SIDE PANEL (højre, tæt på lærred) -->
             <div class="side-panel" id="sidePanel">
 
                 <!-- ── Crop ── -->
                 <div id="P_crop" class="tool-panel hidden">
                     <div class="panel-title">Beskæring</div>
-                    <p class="text-[11px] text-slate-500 mb-3">Træk i hjørnerne for at vælge området.</p>
+                    <p class="text-[11px] text-slate-400 mb-3 font-semibold">Træk i hjørnerne for at vælge området.</p>
                     <div class="grid grid-cols-2 gap-2 mb-3">
                         <div><span class="lbl">Bredde</span><input id="cropW" class="inp text-xs" readonly></div>
                         <div><span class="lbl">Højde</span><input id="cropH" class="inp text-xs" readonly></div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="applyCrop()" class="btn btn-p flex-1"><i class="fas fa-check"></i> Beskær</button>
+                        <button onclick="applyCrop()" class="btn btn-p flex-1"><span class="material-symbols-outlined" style="font-size:16px">check</span> Beskær</button>
                         <button onclick="cancelTool()" class="btn btn-s">Annuller</button>
                     </div>
                 </div>
@@ -349,7 +458,7 @@
                             <button id="bItalic" onclick="togStyle('italic')" class="btn btn-s px-3 text-xs"><i class="fas fa-italic"></i></button>
                             <button id="bShadow" onclick="togStyle('shadow')" class="btn btn-s px-3 text-xs"><i class="fas fa-clone"></i></button>
                         </div>
-                        <button onclick="addText()" class="btn btn-p btn-w"><i class="fas fa-plus"></i> Tilføj tekst</button>
+                        <button onclick="addText()" class="btn btn-p btn-w"><span class="material-symbols-outlined" style="font-size:16px">add</span> Tilføj tekst</button>
                         <button onclick="flattenTexts()" id="flattenBtn" class="btn btn-s btn-w" style="display:none"><i class="fas fa-layer-group"></i> Flet ind i billede</button>
                     </div>
                 </div>
@@ -357,21 +466,21 @@
                 <!-- ── Resize ── -->
                 <div id="P_resize" class="tool-panel hidden">
                     <div class="panel-title">Filstørrelse</div>
-                    <p class="text-[11px] text-slate-500 mb-2">Grøn = god kvalitet, rød = lav.</p>
-                    <div class="flex justify-between text-[10px] text-slate-600 mb-1"><span>Lav</span><span>Høj</span></div>
+                    <p class="text-[11px] text-slate-400 mb-2 font-semibold">Grøn = god kvalitet, rød = lav.</p>
+                    <div class="flex justify-between text-[10px] text-slate-500 font-bold mb-1"><span>Lav</span><span>Høj</span></div>
                     <div class="quality-track relative"><input type="range" id="qSlider" class="q-slider" min="5" max="100" value="92"></div>
-                    <div class="flex justify-between mt-1 mb-3"><span class="text-sm font-semibold" id="qLabel">92%</span><span class="text-xs text-slate-400" id="sizeLabel">--</span></div>
-                    <div class="bg-[#181b28] rounded-lg p-3 text-[11px] space-y-1">
-                        <div class="flex justify-between"><span class="text-slate-500">Original</span><span id="origSize" class="text-slate-300">--</span></div>
-                        <div class="flex justify-between"><span class="text-slate-500">Ny</span><span id="newSize" class="text-slate-300">--</span></div>
-                        <div class="flex justify-between"><span class="text-slate-500">Sparet</span><span id="savedSize" class="text-blue-400">--</span></div>
+                    <div class="flex justify-between mt-1 mb-3"><span class="text-sm font-bold" id="qLabel">92%</span><span class="text-xs text-slate-400 font-bold" id="sizeLabel">--</span></div>
+                    <div class="info-box text-[11px] space-y-1">
+                        <div class="flex justify-between"><span class="text-slate-400 font-bold">Original</span><span id="origSize" class="text-slate-600 font-bold">--</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400 font-bold">Ny</span><span id="newSize" class="text-slate-600 font-bold">--</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400 font-bold">Sparet</span><span id="savedSize" class="text-neon-blue font-bold">--</span></div>
                     </div>
                 </div>
 
                 <!-- ── Remove BG ── -->
                 <div id="P_removebg" class="tool-panel hidden">
                     <div class="panel-title"><i class="fas fa-eraser mr-1"></i> Fjern baggrund</div>
-                    <p class="text-[11px] text-slate-500 mb-3">Vælg hvilken baggrund der skal bruges efter fjernelse.</p>
+                    <p class="text-[11px] text-slate-400 mb-3 font-semibold">Vælg hvilken baggrund der skal bruges efter fjernelse.</p>
                     <div class="preset-grid mb-3">
                         <div class="preset-card" onclick="aiRemoveBg('transparent')">
                             <span class="preset-icon">🔲</span><span class="preset-label">Gennemsigtig</span>
@@ -395,7 +504,7 @@
                 <!-- ── Replace BG ── -->
                 <div id="P_replacebg" class="tool-panel hidden">
                     <div class="panel-title"><i class="fas fa-image mr-1"></i> Erstat baggrund</div>
-                    <p class="text-[11px] text-slate-500 mb-3">AI erstatter baggrunden med et nyt miljø.</p>
+                    <p class="text-[11px] text-slate-400 mb-3 font-semibold">AI erstatter baggrunden med et nyt miljø.</p>
                     <div class="preset-grid mb-3">
                         <div class="preset-card" onclick="aiReplaceBg('desert')">
                             <span class="preset-icon">🏜️</span><span class="preset-label">Ørken</span>
@@ -416,7 +525,7 @@
                     <div class="panel-section">
                         <span class="lbl">Eller beskriv selv</span>
                         <textarea id="replaceBgPrompt" class="inp text-xs" placeholder="Fx: En tropisk strand ved solnedgang..."></textarea>
-                        <button onclick="aiReplaceBg('custom')" class="btn btn-p btn-w mt-2"><i class="fas fa-magic"></i> Erstat baggrund</button>
+                        <button onclick="aiReplaceBg('custom')" class="btn btn-p btn-w mt-2"><span class="material-symbols-outlined" style="font-size:16px">auto_awesome</span> Erstat baggrund</button>
                     </div>
                     <button onclick="showApiModal()" class="btn btn-s btn-w text-[10px]"><i class="fas fa-key"></i> Skift API-nøgle</button>
                 </div>
@@ -424,7 +533,7 @@
                 <!-- ── Change Clothes ── -->
                 <div id="P_clothes" class="tool-panel hidden">
                     <div class="panel-title"><i class="fas fa-shirt mr-1"></i> Skift tøj</div>
-                    <p class="text-[11px] text-slate-500 mb-3">AI skifter tøjet på personen i billedet.</p>
+                    <p class="text-[11px] text-slate-400 mb-3 font-semibold">AI skifter tøjet på personen i billedet.</p>
                     <div class="preset-grid mb-3">
                         <div class="preset-card" onclick="aiClothes('suit')">
                             <span class="preset-icon">👔</span><span class="preset-label">Jakkesæt</span>
@@ -445,12 +554,12 @@
                     <div class="panel-section">
                         <span class="lbl">Beskriv selv</span>
                         <textarea id="clothesPrompt" class="inp text-xs" placeholder="Fx: En rød ballkjole med glitter..."></textarea>
-                        <button onclick="aiClothes('custom')" class="btn btn-p btn-w mt-2"><i class="fas fa-magic"></i> Skift tøj</button>
+                        <button onclick="aiClothes('custom')" class="btn btn-p btn-w mt-2"><span class="material-symbols-outlined" style="font-size:16px">auto_awesome</span> Skift tøj</button>
                     </div>
                     <div class="panel-section">
                         <span class="lbl">Eller upload reference-billede</span>
                         <input type="file" id="clothesRef" accept="image/*" class="inp text-xs">
-                        <button onclick="aiClothes('ref')" class="btn btn-s btn-w mt-2"><i class="fas fa-upload"></i> Brug reference</button>
+                        <button onclick="aiClothes('ref')" class="btn btn-s btn-w mt-2"><span class="material-symbols-outlined" style="font-size:16px">upload</span> Brug reference</button>
                     </div>
                     <button onclick="showApiModal()" class="btn btn-s btn-w text-[10px]"><i class="fas fa-key"></i> Skift API-nøgle</button>
                 </div>
@@ -460,38 +569,38 @@
                     <div class="panel-title"><i class="fab fa-facebook mr-1"></i> Facebook Creative</div>
 
                     <!-- 1. TEKST (øverst) -->
-                    <div class="panel-section" style="background:#181b28;border-radius:10px;padding:12px;border:1px solid #1e2236;">
+                    <div class="panel-section fb-section">
                         <span class="lbl" style="margin-bottom:8px">Tekst</span>
                         <input id="fbText" class="inp mb-3" placeholder="Skriv din tekst her..." style="font-size:13px">
 
                         <span class="lbl">Størrelse</span>
                         <div class="flex items-center gap-2 mb-3">
-                            <input type="range" id="fbTextSize" min="12" max="120" value="48" style="flex:1;accent-color:#3b82f6;cursor:pointer">
-                            <span id="fbTextSizeLabel" class="text-xs text-slate-400" style="min-width:32px;text-align:right">48px</span>
+                            <input type="range" id="fbTextSize" min="12" max="120" value="48" style="flex:1;accent-color:#00e5ff;cursor:pointer">
+                            <span id="fbTextSizeLabel" class="text-xs text-slate-400 font-bold" style="min-width:32px;text-align:right">48px</span>
                         </div>
 
                         <div class="flex gap-3 items-center mb-3">
                             <div class="flex items-center gap-1">
-                                <span class="text-[10px] text-slate-500">Tekst</span>
+                                <span class="text-[10px] text-slate-500 font-bold">Tekst</span>
                                 <div class="color-swatch" style="width:26px;height:26px"><input type="color" id="fbTextColor" value="#ffffff"></div>
                             </div>
                             <div class="flex items-center gap-1">
-                                <span class="text-[10px] text-slate-500">Baggrund</span>
+                                <span class="text-[10px] text-slate-500 font-bold">Baggrund</span>
                                 <div class="color-swatch" style="width:26px;height:26px"><input type="color" id="fbTextBg" value="#1877F2"></div>
                             </div>
                             <label class="flex items-center gap-1 cursor-pointer">
-                                <input type="checkbox" id="fbTextBgOn" checked style="accent-color:#3b82f6">
-                                <span class="text-[10px] text-slate-400">Bg</span>
+                                <input type="checkbox" id="fbTextBgOn" checked style="accent-color:#00e5ff">
+                                <span class="text-[10px] text-slate-400 font-bold">Bg</span>
                             </label>
                         </div>
 
                         <div class="flex items-center gap-2 mb-3">
-                            <span class="text-[10px] text-slate-500">Hjørner</span>
-                            <button id="fbCornerRound" onclick="setFbCorner('round')" class="btn btn-s text-[10px] px-2" style="background:#2563eb;color:white"><i class="fas fa-circle"></i> Runde</button>
+                            <span class="text-[10px] text-slate-500 font-bold">Hjørner</span>
+                            <button id="fbCornerRound" onclick="setFbCorner('round')" class="btn btn-s text-[10px] px-2" style="background:linear-gradient(135deg,#00e5ff,#ff00ff);color:white;border:none"><i class="fas fa-circle"></i> Runde</button>
                             <button id="fbCornerSharp" onclick="setFbCorner('sharp')" class="btn btn-s text-[10px] px-2"><i class="fas fa-square"></i> Skarpe</button>
                         </div>
 
-                        <button onclick="fbInsertText()" class="btn btn-p btn-w" style="font-size:14px;padding:10px 16px"><i class="fas fa-plus"></i> Sæt ind</button>
+                        <button onclick="fbInsertText()" class="btn btn-p btn-w" style="font-size:14px;padding:10px 16px"><span class="material-symbols-outlined" style="font-size:18px">add</span> Sæt ind</button>
                     </div>
 
                     <!-- 2. EMOJIS -->
@@ -578,7 +687,7 @@
                 <!-- ── Smart Text ── -->
                 <div id="P_smarttext" class="tool-panel hidden">
                     <div class="panel-title"><i class="fas fa-wand-magic-sparkles mr-1"></i> Smart Tekst</div>
-                    <p class="text-[11px] text-slate-500 mb-3">AI placerer teksten smukt og professionelt på billedet.</p>
+                    <p class="text-[11px] text-slate-400 mb-3 font-semibold">AI placerer teksten smukt og professionelt på billedet.</p>
                     <div class="preset-grid mb-3">
                         <div class="preset-card" onclick="smartTextPreset('ad')">
                             <span class="preset-icon">📢</span><span class="preset-label">Reklame</span>
@@ -604,7 +713,7 @@
                         <span class="lbl">Stil (valgfri)</span>
                         <input id="smartTextStyle" class="inp text-xs" placeholder="Fx: moderne, minimalistisk, fed...">
                     </div>
-                    <button onclick="aiSmartText()" class="btn btn-p btn-w"><i class="fas fa-wand-magic-sparkles"></i> Indsæt tekst med AI</button>
+                    <button onclick="aiSmartText()" class="btn btn-p btn-w"><span class="material-symbols-outlined" style="font-size:16px">auto_awesome</span> Indsæt tekst med AI</button>
                     <button onclick="showApiModal()" class="btn btn-s btn-w text-[10px] mt-2"><i class="fas fa-key"></i> Skift API-nøgle</button>
                 </div>
 
@@ -912,7 +1021,7 @@ function togStyle(s) {
     tStyles[s] = !tStyles[s];
     const map = { bold: 'bBold', italic: 'bItalic', shadow: 'bShadow' };
     const b = document.getElementById(map[s]);
-    b.style.background = tStyles[s] ? '#2563eb' : ''; b.style.color = tStyles[s] ? '#fff' : '';
+    b.style.background = tStyles[s] ? 'linear-gradient(135deg,#00e5ff,#ff00ff)' : ''; b.style.color = tStyles[s] ? '#fff' : '';
 }
 function addText() {
     const txt = document.getElementById('txtVal').value;
@@ -1212,10 +1321,12 @@ let fbCornerStyle = 'round'; // 'round' or 'sharp'
 
 function setFbCorner(style) {
     fbCornerStyle = style;
-    document.getElementById('fbCornerRound').style.background = style === 'round' ? '#2563eb' : '';
+    document.getElementById('fbCornerRound').style.background = style === 'round' ? 'linear-gradient(135deg,#00e5ff,#ff00ff)' : '';
     document.getElementById('fbCornerRound').style.color = style === 'round' ? 'white' : '';
-    document.getElementById('fbCornerSharp').style.background = style === 'sharp' ? '#2563eb' : '';
+    document.getElementById('fbCornerRound').style.border = style === 'round' ? 'none' : '';
+    document.getElementById('fbCornerSharp').style.background = style === 'sharp' ? 'linear-gradient(135deg,#00e5ff,#ff00ff)' : '';
     document.getElementById('fbCornerSharp').style.color = style === 'sharp' ? 'white' : '';
+    document.getElementById('fbCornerSharp').style.border = style === 'sharp' ? 'none' : '';
 }
 
 function deselectAllFb() {
